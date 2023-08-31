@@ -13,7 +13,7 @@ export class UsersService {
   async create(createUserDto: CreateUserDto): Promise<UserType> {
     const [createdUser] = await this.prisma.$transaction(
       [
-        this.prisma.user.create({
+        this.prisma.users.create({
           data: createUserDto,
         }),
       ],
@@ -23,7 +23,7 @@ export class UsersService {
   }
 
   async find(id: string): Promise<UserType[]> {
-    const users = this.prisma.user.findMany({
+    const users = this.prisma.users.findMany({
       where: {
         id: {
           startsWith: id,
@@ -36,7 +36,7 @@ export class UsersService {
   async update(id: string, updateUserDto: UpdateUserDto): Promise<UserType> {
     const [updatedUser] = await this.prisma.$transaction(
       [
-        this.prisma.user.update({
+        this.prisma.users.update({
           where: {
             id,
           },
@@ -51,7 +51,7 @@ export class UsersService {
   async remove(id: string): Promise<void> {
     await this.prisma.$transaction(
       [
-        this.prisma.user.delete({
+        this.prisma.users.delete({
           where: {
             id,
           },
