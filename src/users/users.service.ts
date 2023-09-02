@@ -18,6 +18,7 @@ export class UsersService {
 
     return hashedPassword;
   }
+
   async create(createUserDto: CreateUserDto): Promise<UserType> {
     const hashedPassword = await this.hashPassword(createUserDto.password);
     const [createdUser] = await this.prisma.$transaction(
@@ -31,6 +32,7 @@ export class UsersService {
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+
     return createdUser;
   }
 
@@ -42,6 +44,7 @@ export class UsersService {
         },
       },
     });
+
     return users;
   }
 
@@ -66,6 +69,7 @@ export class UsersService {
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+
     return updatedUser;
   }
 
