@@ -19,7 +19,7 @@ import { UserType } from './interface/user.interface';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
+  @Post('/sign-up')
   async create(@Body() createUserDto: CreateUserDto): Promise<UserType> {
     return await this.usersService.create(createUserDto);
   }
