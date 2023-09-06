@@ -36,6 +36,26 @@ export class UsersService {
     return createdUser;
   }
 
+  async findOneId(id: string) {
+    const user = await this.prisma.users.findFirst({
+      where: {
+        id,
+      },
+    });
+
+    return user;
+  }
+
+  async findOneEmail(email: string) {
+    const user = await this.prisma.users.findFirst({
+      where: {
+        email,
+      },
+    });
+
+    return user;
+  }
+
   async find(id: string): Promise<UserType[]> {
     const users = this.prisma.users.findMany({
       where: {
@@ -64,6 +84,7 @@ export class UsersService {
           data: {
             ...updateUserDto,
             password: hashedPassword,
+            updated_at: new Date(),
           },
         }),
       ],
