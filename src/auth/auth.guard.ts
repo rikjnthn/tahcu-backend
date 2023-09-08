@@ -14,7 +14,7 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
 
-    const token = this.extractJwtToken(request);
+    const token = request.cookies?.tahcu_auth?.access_token;
 
     if (!token) throw new UnauthorizedException();
 
@@ -29,13 +29,5 @@ export class AuthGuard implements CanActivate {
     }
 
     return true;
-  }
-
-  private extractJwtToken(request: Request): string | undefined {
-    if (!request.headers.authorization) return undefined;
-
-    const [type, token] = request.headers.authorization.split(' ');
-
-    return type === 'Bearer' ? token : undefined;
   }
 }
