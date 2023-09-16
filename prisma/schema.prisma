@@ -29,7 +29,7 @@ model Message {
   group_id String?
   sender Users @relation("sender", fields: [sender_id], references: [id])
   sender_id String
-  receiver Users @relation("receiver", fields: [receiver_id], references: [id])
+  receiver Users? @relation("receiver", fields: [receiver_id], references: [id])
   receiver_id String
   sent_at DateTime @default(now()) @db.Timestamptz()
   updated_at DateTime @updatedAt
