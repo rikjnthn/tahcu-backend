@@ -4,56 +4,46 @@ import {
   ExceptionFilter,
   HttpStatus,
 } from '@nestjs/common';
+import { WsException, BaseWsExceptionFilter } from '@nestjs/websockets';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { Response } from 'express';
+import { Socket } from 'socket.io';
 
 @Catch(PrismaClientKnownRequestError)
-export class PrismaKnownRequestErrorFilter implements ExceptionFilter {
+export class PrismaKnownErrorWebsocket extends BaseWsExceptionFilter {
   catch(exception: PrismaClientKnownRequestError, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
+    const ctx = host.switchToWs();
 
-    const response = ctx.getResponse<Response>();
+    const client = ctx.getClient<Socket>();
 
-    if (exception.code === 'P2002') {
-      this.handleResponse(response, {
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: {
-          type: 'Duplicate field value',
-          meta: exception.meta.target,
-        },
-      });
-    } else if (exception.code === 'P2003') {
-      this.handleResponse(response, {
+    if (exception.code === 'P2003') {
+      this.handleRespose(client, {
         statusCode: HttpStatus.BAD_REQUEST,
         message: {
           type: exception.message,
-          meta: exception.meta.target,
+          meta: exception.meta,
         },
       });
     } else if (exception.code === 'P2023') {
-      this.handleResponse(response, {
+      this.handleRespose(client, {
         statusCode: HttpStatus.BAD_REQUEST,
         message: {
           type: 'Id does not valid',
         },
       });
     } else if (exception.code === 'P2025') {
-      this.handleResponse(response, {
+      this.handleRespose(client, {
         statusCode: HttpStatus.NOT_FOUND,
         message: {
           type: exception.meta.cause,
         },
       });
     } else {
-      response.status(HttpStatus.BAD_REQUEST).json({
-        statusCode: HttpStatus.BAD_REQUEST,
-        message: exception.message,
-      });
+      super.catch(exception, host);
     }
   }
 
-  handleResponse(response: Response, body: ResponseType) {
-    response.status(body.statusCode).json(body);
+  handleRespose(client: Socket, response: ResponseType) {
+    client.emit('exception', response);
   }
 }
 
