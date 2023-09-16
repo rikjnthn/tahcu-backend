@@ -1,13 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import {
-  BadRequestException,
-  HttpStatus,
-  ValidationPipe,
-} from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
+import validationExceptionFactory from './common/helper/validation-exception-factory';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -28,19 +25,7 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      exceptionFactory: (errors) => {
-        const errorResponse = errors.map((error) => {
-          return {
-            [error.property]: Object.values(error.constraints).join(','),
-          };
-        });
-
-        return new BadRequestException({
-          message: Object.assign({}, ...errorResponse),
-          error: 'Bad Request',
-          statusCode: HttpStatus.BAD_REQUEST,
-        });
-      },
+      exceptionFactory: validationExceptionFactory,
     }),
   );
 
