@@ -64,7 +64,7 @@ export class MessageGateway implements OnGatewayConnection {
     const request = client.handshake;
 
     const cookie = request.headers.cookie;
-    const tahcu_auth = parse(cookie).tahcu_auth.slice(2);
+    const tahcu_auth = parse(cookie).tahcu_auth;
 
     request['cookies'] = JSON.parse(tahcu_auth);
   }
