@@ -11,6 +11,7 @@ import { Response } from 'express';
 export class PrismaKnownRequestErrorFilter implements ExceptionFilter {
   catch(exception: PrismaClientKnownRequestError, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
+
     const response = ctx.getResponse<Response>();
 
     if (exception.code === 'P2002') {
@@ -18,6 +19,14 @@ export class PrismaKnownRequestErrorFilter implements ExceptionFilter {
         statusCode: HttpStatus.BAD_REQUEST,
         message: {
           type: 'Duplicate field value',
+          meta: exception.meta.target,
+        },
+      });
+    } else if (exception.code === 'P2003') {
+      this.handleResponse(response, {
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: {
+          type: exception.message,
           meta: exception.meta.target,
         },
       });

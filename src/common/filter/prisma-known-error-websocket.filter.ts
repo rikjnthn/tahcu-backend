@@ -4,12 +4,12 @@ import {
   ExceptionFilter,
   HttpStatus,
 } from '@nestjs/common';
-import { WsException } from '@nestjs/websockets';
+import { WsException, BaseWsExceptionFilter } from '@nestjs/websockets';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { Socket } from 'socket.io';
 
 @Catch(PrismaClientKnownRequestError)
-export class PrismaKnownErrorWebsocket implements ExceptionFilter {
+export class PrismaKnownErrorWebsocket extends BaseWsExceptionFilter {
   catch(exception: PrismaClientKnownRequestError, host: ArgumentsHost) {
     const ctx = host.switchToWs();
 
@@ -23,13 +23,27 @@ export class PrismaKnownErrorWebsocket implements ExceptionFilter {
           meta: exception.meta,
         },
       });
+    } else if (exception.code === 'P2023') {
+      this.handleRespose(client, {
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: {
+          type: 'Id does not valid',
+        },
+      });
+    } else if (exception.code === 'P2025') {
+      this.handleRespose(client, {
+        statusCode: HttpStatus.NOT_FOUND,
+        message: {
+          type: exception.meta.cause,
+        },
+      });
     } else {
-      throw new WsException('Bad request');
+      super.catch(exception, host);
     }
   }
 
   handleRespose(client: Socket, response: ResponseType) {
-    client.emit('error', response);
+    client.emit('exception', response);
   }
 }
 
