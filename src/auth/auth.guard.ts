@@ -21,7 +21,7 @@ export class AuthGuard implements CanActivate {
   async handleHttp(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<Request>();
 
-    const token = request.cookies?.tahcu_auth?.access_token;
+    const token = JSON.parse(request.cookies?.tahcu_auth)?.access_token;
 
     const payload = await this.verifyJwt(token);
 
