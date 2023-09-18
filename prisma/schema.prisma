@@ -21,6 +21,8 @@ model Users {
 
   sent_message    Message[] @relation("sender")
   receive_message Message[] @relation("receiver")
+  contact         Contact[] @relation("contact")
+  friends         Contact[] @relation("friends")
 }
 
 model Message {
@@ -33,4 +35,14 @@ model Message {
   receiver_id String
   sent_at     DateTime @default(now()) @db.Timestamptz()
   updated_at  DateTime @updatedAt
+}
+
+model Contact {
+  id         String @id @default(uuid())
+  user       Users  @relation("contact", fields: [user_id], references: [id])
+  user_id    String
+  friends    Users  @relation("friends", fields: [friends_id], references: [id])
+  friends_id String
+
+  @@unique([user_id, friends_id])
 }

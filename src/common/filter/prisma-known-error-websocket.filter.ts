@@ -19,7 +19,7 @@ export class PrismaKnownErrorWebsocket extends BaseWsExceptionFilter {
       this.handleRespose(client, {
         statusCode: HttpStatus.BAD_REQUEST,
         message: {
-          type: exception.message,
+          type: 'Foreign key constraint failed',
           meta: exception.meta,
         },
       });

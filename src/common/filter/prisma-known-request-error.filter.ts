@@ -26,8 +26,8 @@ export class PrismaKnownRequestErrorFilter implements ExceptionFilter {
       this.handleResponse(response, {
         statusCode: HttpStatus.BAD_REQUEST,
         message: {
-          type: exception.message,
-          meta: exception.meta.target,
+          type: 'Foreign key constraint failed',
+          meta: exception.meta,
         },
       });
     } else if (exception.code === 'P2023') {
