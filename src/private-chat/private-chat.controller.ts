@@ -24,25 +24,25 @@ export class PrivateChatController {
   constructor(private readonly privateChatService: PrivateChatService) {}
 
   @Post()
-  create(@Body() createPrivateChatDto: CreatePrivateChatDto) {
-    return this.privateChatService.create(createPrivateChatDto);
+  async create(@Body() createPrivateChatDto: CreatePrivateChatDto) {
+    return await this.privateChatService.create(createPrivateChatDto);
   }
 
   @Get()
-  findAll(@Req() request: Request) {
-    return this.privateChatService.findAll(request);
+  async findAll(@Req() request: Request) {
+    return await this.privateChatService.findAll(request);
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Param('id') id: string,
     @Body() updatePrivateChatDto: UpdatePrivateChatDto,
   ) {
-    return this.privateChatService.update(id, updatePrivateChatDto);
+    return await this.privateChatService.update(id, updatePrivateChatDto);
   }
 
   @Delete()
-  remove(@Body('id') id: string[]) {
-    return this.privateChatService.remove(id);
+  async remove(@Body('id') id: string[]) {
+    return await this.privateChatService.remove(id);
   }
 }
