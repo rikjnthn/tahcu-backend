@@ -1,8 +1,7 @@
-import { Controller, Post, Body, Res, Get, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Res } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 import { Response } from 'express';
-import { AuthGuard } from './auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -16,14 +15,12 @@ export class AuthController {
   ) {
     const COOKIE_EXPIRED = 5184000000; // 2 months
 
-    response.cookie(
-      'tahcu_auth',
-      await this.authService.login(idOrEmail, password),
-      {
-        secure: true,
-        expires: new Date(Date.now() + COOKIE_EXPIRED),
-        sameSite: 'lax',
-      },
-    );
+    const token = await this.authService.login(idOrEmail, password);
+
+    response.cookie('tahcu_auth', JSON.stringify(token), {
+      secure: true,
+      expires: new Date(Date.now() + COOKIE_EXPIRED),
+      sameSite: 'lax',
+    });
   }
 }
