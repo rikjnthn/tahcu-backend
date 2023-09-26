@@ -17,6 +17,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaKnownRequestErrorFilter } from 'src/common/filter/prisma-known-request-error.filter';
 import { UserType } from './interface/user.interface';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { User } from 'src/common/decorator/user.decorator';
 
 @Controller('users')
 @UseFilters(PrismaKnownRequestErrorFilter)
@@ -35,18 +36,18 @@ export class UsersController {
     return await this.usersService.find(id);
   }
 
-  @Patch(':id')
+  @Patch()
   @UseGuards(AuthGuard)
   async update(
-    @Param('id') id: string,
+    @User('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserType> {
     return await this.usersService.update(id, updateUserDto);
   }
 
-  @Delete(':id')
+  @Delete()
   @UseGuards(AuthGuard)
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(@User('id') id: string): Promise<void> {
     await this.usersService.remove(id);
   }
 }
