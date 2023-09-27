@@ -19,10 +19,10 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser({ idOrEmail, password }: LoginDto) {
-    const user = isEmail(idOrEmail)
-      ? await this.usersService.findOneEmail(idOrEmail)
-      : await this.usersService.findOneId(idOrEmail);
+  async validateUser({ user_idOrEmail, password }: LoginDto) {
+    const user = isEmail(user_idOrEmail)
+      ? await this.usersService.findOneEmail(user_idOrEmail)
+      : await this.usersService.findOneId(user_idOrEmail);
 
     if (!user)
       throw new BadRequestException({
@@ -48,6 +48,7 @@ export class AuthService {
   private async generateToken(user: UserType) {
     const payload = {
       id: user.id,
+      user_id: user.user_id,
       email: user.email,
       username: user.username,
       created_at: user.created_at,
@@ -67,7 +68,7 @@ export class AuthService {
     await this.usersService.create(signUpDto);
 
     return await this.validateUser({
-      idOrEmail: signUpDto.id,
+      user_idOrEmail: signUpDto.user_id,
       password: signUpDto.password,
     });
   }
