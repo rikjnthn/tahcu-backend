@@ -63,6 +63,14 @@ export class UsersService {
           startsWith: id,
         },
       },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        is_active: true,
+        created_at: true,
+        updated_at: true,
+      },
     });
 
     return users;
