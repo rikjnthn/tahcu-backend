@@ -16,18 +16,17 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { User } from 'src/common/decorator/user.decorator';
 
 @Controller('users')
+@UseGuards(AuthGuard)
 @UseFilters(PrismaKnownRequestErrorFilter)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get(':id')
-  @UseGuards(AuthGuard)
   async find(@Param('id') id: string): Promise<UserType[]> {
     return await this.usersService.find(id);
   }
 
   @Patch()
-  @UseGuards(AuthGuard)
   async update(
     @User('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -36,7 +35,6 @@ export class UsersController {
   }
 
   @Delete()
-  @UseGuards(AuthGuard)
   async remove(@User('id') id: string): Promise<void> {
     await this.usersService.remove(id);
   }
