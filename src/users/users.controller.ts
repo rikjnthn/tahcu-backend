@@ -3,7 +3,6 @@ import {
   Get,
   Body,
   Patch,
-  Param,
   Delete,
   UseFilters,
   UseGuards,
@@ -21,9 +20,9 @@ import { User } from 'src/common/decorator/user.decorator';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get(':id')
-  async find(@Param('id') id: string): Promise<UserType[]> {
-    return await this.usersService.find(id);
+  @Get()
+  async find(@Body('user_id') userId: string): Promise<UserType[]> {
+    return await this.usersService.find(userId);
   }
 
   @Patch()
