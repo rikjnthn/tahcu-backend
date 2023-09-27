@@ -1,18 +1,14 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Patch,
   Param,
   Delete,
   UseFilters,
   UseGuards,
-  HttpCode,
-  HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaKnownRequestErrorFilter } from 'src/common/filter/prisma-known-request-error.filter';
 import { UserType } from './interface/user.interface';
@@ -23,12 +19,6 @@ import { User } from 'src/common/decorator/user.decorator';
 @UseFilters(PrismaKnownRequestErrorFilter)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
-  @Post('/sign-up')
-  @HttpCode(HttpStatus.CREATED)
-  async create(@Body() createUserDto: CreateUserDto): Promise<UserType> {
-    return await this.usersService.create(createUserDto);
-  }
 
   @Get(':id')
   @UseGuards(AuthGuard)
