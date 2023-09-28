@@ -4,7 +4,6 @@ import { UsersService } from './users.service';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { PrismaService } from 'src/common/prisma/prisma.service';
-import { ValidationPipe } from '@nestjs/common';
 
 describe('UsersController', () => {
   describe('Unit Testing', () => {
@@ -99,7 +98,10 @@ describe('UsersController', () => {
       prismaService = module.get<PrismaService>(PrismaService);
       usersService = module.get<UsersService>(UsersService);
       usersController = module.get<UsersController>(UsersController);
-      usersService.create({
+    });
+
+    beforeAll(async () => {
+      await usersService.create({
         email: 'tes@gmail.com',
         user_id: 'tes123',
         is_active: true,
@@ -124,10 +126,12 @@ describe('UsersController', () => {
 
       expect(Array.isArray(users)).toBeTruthy();
 
-      expect(users[0].email).toBe(usersFoundMock.email);
-      expect(users[0].user_id).toBe(usersFoundMock.user_id);
-      expect(users[0].is_active).toBe(usersFoundMock.is_active);
-      expect(users[0].username).toBe(usersFoundMock.username);
+      users.forEach((user) => {
+        expect(user.email).toBe(usersFoundMock.email);
+        expect(user.user_id).toBe(usersFoundMock.user_id);
+        expect(user.is_active).toBe(usersFoundMock.is_active);
+        expect(user.username).toBe(usersFoundMock.username);
+      });
     });
 
     it('should return empty array if users not found', async () => {
