@@ -126,7 +126,7 @@ describe('AuthController', () => {
         .mockRejectedValue(new BadRequestException());
 
       await expect(
-        await authController.signUp(signUpDto, mockResponse),
+        authController.signUp(signUpDto, mockResponse),
       ).rejects.toThrowError(new BadRequestException());
     });
   });
