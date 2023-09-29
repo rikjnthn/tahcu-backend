@@ -159,6 +159,20 @@ describe('UsersController', () => {
       expect(updatedUser.username).toBe(updatedUser.username);
     });
 
+    it('should return exception if user that need to update not found', async () => {
+      const updateUserDto = {
+        email: 'ganti@gmail.com',
+        is_active: true,
+        user_id: 'ganti123',
+        password: 'ganti_password',
+        username: 'ganti123',
+      };
+
+      await expect(
+        usersController.update('1', updateUserDto),
+      ).rejects.toThrowError();
+    });
+
     it('should remove users', async () => {
       const [user] = await usersController.find('tes_banget');
       await usersController.remove(user.id);
@@ -168,6 +182,10 @@ describe('UsersController', () => {
       expect(Array.isArray(users)).toBeTruthy();
 
       expect(users.length).toBe(0);
+    });
+
+    it('should return exception when remove users that not exist', async () => {
+      await expect(usersController.remove('1')).rejects.toThrowError();
     });
 
     afterAll(async () => {

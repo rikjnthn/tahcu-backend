@@ -280,14 +280,32 @@ describe('UsersService', () => {
       expect(updatedUser.username).toBe(updateUserDto.username);
     });
 
+    it('should return exception if user that need to update not found', async () => {
+      const updateUserDto = {
+        email: 'ganti@gmail.com',
+        is_active: true,
+        user_id: 'ganti123',
+        password: 'ganti_password',
+        username: 'ganti123',
+      };
+
+      await expect(
+        usersService.update('1', updateUserDto),
+      ).rejects.toThrowError();
+    });
+
     it('should remove user', async () => {
       const user = await usersService.findOneId('ganti123');
 
-      await usersService.remove(user.id);
+      await expect(usersService.remove(user.id)).resolves.toBeUndefined();
 
       const findUser = await usersService.findOneId('ganti123');
 
       expect(findUser).toBeNull();
+    });
+
+    it('should return exception when remove users that not exist', async () => {
+      await expect(usersService.remove('1')).rejects.toThrowError();
     });
 
     afterAll(async () => {
