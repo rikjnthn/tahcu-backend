@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtModule, JwtService } from '@nestjs/jwt';
-import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -46,6 +50,44 @@ describe('AuthController', () => {
       expect(loggedIn).toBeUndefined();
     });
 
+    it('should return exception if user not found', async () => {
+      const loginDto = {
+        user_idOrEmail: 'tess123',
+        password: 'password',
+      };
+
+      const mockResponse = {
+        cookie: jest.fn() as any,
+      } as Response;
+
+      jest
+        .spyOn(authService, 'login')
+        .mockRejectedValue(new NotFoundException());
+
+      await expect(
+        authController.login(loginDto, mockResponse),
+      ).rejects.toThrowError(new NotFoundException());
+    });
+
+    it('should return exception if password is wrong', async () => {
+      const loginDto = {
+        user_idOrEmail: 'tes123',
+        password: 'passwords',
+      };
+
+      const mockResponse = {
+        cookie: jest.fn() as any,
+      } as Response;
+
+      jest
+        .spyOn(authService, 'login')
+        .mockRejectedValue(new UnauthorizedException());
+
+      await expect(
+        authController.login(loginDto, mockResponse),
+      ).rejects.toThrowError(new UnauthorizedException());
+    });
+
     it('should sign up', async () => {
       const signUpDto = {
         user_id: 'tes123',
@@ -64,6 +106,28 @@ describe('AuthController', () => {
       const signUp = await authController.signUp(signUpDto, mockResponse);
 
       expect(signUp).toBeUndefined();
+    });
+
+    it('should retrun exception if sign up dto is not valid', async () => {
+      const signUpDto = {
+        user_id: '',
+        username: '',
+        password: '',
+        email: '',
+        is_active: undefined,
+      };
+
+      const mockResponse = {
+        cookie: jest.fn() as any,
+      } as Response;
+
+      jest
+        .spyOn(authService, 'signUp')
+        .mockRejectedValue(new BadRequestException());
+
+      await expect(
+        await authController.signUp(signUpDto, mockResponse),
+      ).rejects.toThrowError(new BadRequestException());
     });
   });
 
@@ -132,7 +196,7 @@ describe('AuthController', () => {
         cookie: jest.fn() as any,
       } as Response;
 
-      expect(
+      await expect(
         authController.signUp(signUpDto, mockResponse),
       ).rejects.toThrowError();
     });
@@ -162,7 +226,9 @@ describe('AuthController', () => {
         cookie: jest.fn() as any,
       } as Response;
 
-      expect(authController.login(loginDto, mockResponse)).rejects.toThrowError(
+      await expect(
+        authController.login(loginDto, mockResponse),
+      ).rejects.toThrowError(
         new NotFoundException({
           error: 'Bad Request Exception',
           meta: {
@@ -182,7 +248,9 @@ describe('AuthController', () => {
         cookie: jest.fn() as any,
       } as Response;
 
-      expect(authController.login(loginDto, mockResponse)).rejects.toThrowError(
+      await expect(
+        authController.login(loginDto, mockResponse),
+      ).rejects.toThrowError(
         new UnauthorizedException({
           error: 'Unauthorized',
           meta: {
