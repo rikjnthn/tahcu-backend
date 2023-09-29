@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
@@ -70,6 +71,16 @@ describe('UsersService', () => {
       expect(users).toEqual(userFoundMock);
     });
 
+    it('should return empty array if users not found', async () => {
+      jest.spyOn(usersService, 'find').mockResolvedValue([]);
+
+      const users = await usersService.find('y');
+
+      expect(Array.isArray(users)).toBeTruthy();
+
+      expect(users.length).toBe(0);
+    });
+
     it('should find user with id', async () => {
       const userFoundMock = {
         id: '1',
@@ -92,6 +103,12 @@ describe('UsersService', () => {
       expect(user).toEqual(userFoundMock);
     });
 
+    it('should return exception if user not found with id', async () => {
+      jest.spyOn(usersService, 'findOneId').mockRejectedValue(new Error());
+
+      await expect(usersService.findOneId('a')).rejects.toThrowError();
+    });
+
     it('should find user with email', async () => {
       const userFoundMock = {
         id: '1',
@@ -112,6 +129,12 @@ describe('UsersService', () => {
       expect(usersService.findOneEmail).toBeCalledWith('tes@gmail.com');
 
       expect(user).toEqual(userFoundMock);
+    });
+
+    it('should return exception if user not found with email', async () => {
+      jest.spyOn(usersService, 'findOneEmail').mockRejectedValue(new Error());
+
+      await expect(usersService.findOneEmail('a')).rejects.toThrowError();
     });
 
     it('should update users and return record', async () => {
@@ -144,6 +167,42 @@ describe('UsersService', () => {
       expect(updatedUser).toEqual(updatedUserMock);
     });
 
+    it('should return exception if user need to update not found', async () => {
+      const updateUserDtoMock = {
+        user_id: 'akun_baru',
+        email: 'emailbaru@gmail.com',
+        is_active: true,
+        password: 'password_baru',
+        username: 'username_baru',
+      };
+
+      jest
+        .spyOn(usersService, 'update')
+        .mockRejectedValue(new BadRequestException());
+
+      await expect(
+        usersService.update('k', updateUserDtoMock),
+      ).rejects.toThrowError(new BadRequestException());
+    });
+
+    it('should return exception if update user not valid', async () => {
+      const updateUserDtoMock = {
+        user_id: '0',
+        email: '@gmail.com',
+        is_active: true,
+        password: '0',
+        username: '0',
+      };
+
+      jest
+        .spyOn(usersService, 'update')
+        .mockRejectedValue(new BadRequestException());
+
+      await expect(
+        usersService.update('k', updateUserDtoMock),
+      ).rejects.toThrowError(new BadRequestException());
+    });
+
     it('should remove user', async () => {
       jest.spyOn(usersService, 'remove').mockResolvedValue(null);
 
@@ -151,6 +210,12 @@ describe('UsersService', () => {
 
       expect(usersService.remove).toBeCalled();
       expect(usersService.remove).toBeCalledWith('1');
+    });
+
+    it('should return exception if user that want to be remove not exist', async () => {
+      jest.spyOn(usersService, 'remove').mockRejectedValue(new Error());
+
+      await expect(usersService.remove('k')).rejects.toThrowError();
     });
   });
 

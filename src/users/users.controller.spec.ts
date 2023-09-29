@@ -4,6 +4,7 @@ import { UsersService } from './users.service';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { PrismaService } from 'src/common/prisma/prisma.service';
+import { BadRequestException } from '@nestjs/common';
 
 describe('UsersController', () => {
   describe('Unit Testing', () => {
@@ -44,6 +45,16 @@ describe('UsersController', () => {
       expect(users).toEqual(usersFoundMock);
     });
 
+    it('should return empty array if users not found', async () => {
+      jest.spyOn(usersService, 'find').mockResolvedValue([]);
+
+      const users = await usersController.find('y');
+
+      expect(Array.isArray(users)).toBeTruthy();
+
+      expect(users.length).toBe(0);
+    });
+
     it('should update users and return record', async () => {
       const updateUserDtoMock = {
         user_id: 'akun_baru',
@@ -73,6 +84,42 @@ describe('UsersController', () => {
       expect(updatedUser).toEqual(updatedUserMock);
     });
 
+    it('should return exception if user need to update not found', async () => {
+      const updateUserDtoMock = {
+        user_id: 'akun_baru',
+        email: 'emailbaru@gmail.com',
+        is_active: true,
+        password: 'password_baru',
+        username: 'username_baru',
+      };
+
+      jest
+        .spyOn(usersService, 'update')
+        .mockRejectedValue(new BadRequestException());
+
+      await expect(
+        usersController.update('k', updateUserDtoMock),
+      ).rejects.toThrowError(new BadRequestException());
+    });
+
+    it('should return exception if update user not valid', async () => {
+      const updateUserDtoMock = {
+        user_id: '0',
+        email: '@gmail.com',
+        is_active: true,
+        password: '0',
+        username: '0',
+      };
+
+      jest
+        .spyOn(usersService, 'update')
+        .mockRejectedValue(new BadRequestException());
+
+      await expect(
+        usersController.update('k', updateUserDtoMock),
+      ).rejects.toThrowError(new BadRequestException());
+    });
+
     it('should remove user', async () => {
       jest.spyOn(usersService, 'remove').mockResolvedValue(null);
 
@@ -80,6 +127,12 @@ describe('UsersController', () => {
 
       expect(usersService.remove).toBeCalled();
       expect(usersService.remove).toBeCalledWith('1');
+    });
+
+    it('should return exception if user that want to be remove not exist', async () => {
+      jest.spyOn(usersService, 'remove').mockRejectedValue(new Error());
+
+      await expect(usersController.remove('k')).rejects.toThrowError();
     });
   });
 
