@@ -1,6 +1,6 @@
 import {
   Injectable,
-  BadRequestException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -25,7 +25,7 @@ export class AuthService {
       : await this.usersService.findOneId(user_idOrEmail);
 
     if (!user)
-      throw new BadRequestException({
+      throw new NotFoundException({
         error: 'Bad Request Exception',
         meta: {
           user: 'User Not Found',
