@@ -26,7 +26,7 @@ export class AuthService {
 
     if (!user)
       throw new NotFoundException({
-        error: 'Bad Request Exception',
+        error: 'User not found',
         meta: {
           user: 'User Not Found',
         },
