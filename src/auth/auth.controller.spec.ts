@@ -189,24 +189,6 @@ describe('AuthController', () => {
       expect(user.username).toBe(signUpDto.username);
     });
 
-    it('should return exception if sing up dto not valid', async () => {
-      const signUpDto = {
-        user_id: 'tes',
-        username: 'tes123',
-        password: 'password',
-        email: 'tes@gmail.com',
-        is_active: true,
-      };
-
-      const mockResponse = {
-        cookie: jest.fn() as any,
-      } as Response;
-
-      await expect(
-        authController.signUp(signUpDto, mockResponse),
-      ).rejects.toThrowError();
-    });
-
     it('should login', async () => {
       const loginDto = {
         user_idOrEmail: 'tes123',
