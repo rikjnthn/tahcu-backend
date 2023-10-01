@@ -47,6 +47,9 @@ describe('AuthController', () => {
 
       const loggedIn = await authController.login(loginDto, mockResponse);
 
+      expect(authService.login).toBeCalled();
+      expect(authService.login).toBeCalledWith(loginDto);
+
       expect(loggedIn).toBeUndefined();
     });
 
@@ -104,6 +107,9 @@ describe('AuthController', () => {
       jest.spyOn(authService, 'signUp').mockResolvedValue(undefined);
 
       const signUp = await authController.signUp(signUpDto, mockResponse);
+
+      expect(authService.signUp).toBeCalled();
+      expect(authService.signUp).toBeCalledWith(signUpDto);
 
       expect(signUp).toBeUndefined();
     });
@@ -230,7 +236,7 @@ describe('AuthController', () => {
         authController.login(loginDto, mockResponse),
       ).rejects.toThrowError(
         new NotFoundException({
-          error: 'Bad Request Exception',
+          error: 'User not found',
           meta: {
             user: 'User Not Found',
           },
