@@ -198,10 +198,10 @@ describe('AuthService', () => {
 
     it('should return object of access token when sign up and user should be created', async () => {
       const signUpDto = {
-        user_id: 'tess123',
-        username: 'tes123',
+        user_id: 'budi123',
+        username: 'budi123',
         password: 'password',
-        email: 'tess@gmail.com',
+        email: 'budi@gmail.com',
         is_active: true,
       };
 
@@ -215,7 +215,7 @@ describe('AuthService', () => {
 
     it('should return object of access token when login', async () => {
       const loginDto = {
-        user_idOrEmail: 'tess123',
+        user_idOrEmail: 'budi123',
         password: 'password',
       };
 
@@ -242,7 +242,7 @@ describe('AuthService', () => {
 
     it('should return exception if password is wrong', async () => {
       const loginDto = {
-        user_idOrEmail: 'tess123',
+        user_idOrEmail: 'budi123',
         password: 'passwords',
       };
 

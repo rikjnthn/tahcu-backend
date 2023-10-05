@@ -24,7 +24,7 @@ describe('AuthGuard', () => {
     });
 
     it('should return true if user is authorized', async () => {
-      const { is_active, password, ...payload } = await usersService.create({
+      const { is_active, ...payload } = await usersService.create({
         email: 'tes@gmail.com',
         is_active: true,
         password: 'password',

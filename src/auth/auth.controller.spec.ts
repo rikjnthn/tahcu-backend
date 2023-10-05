@@ -168,10 +168,10 @@ describe('AuthController', () => {
 
     it('should sign up', async () => {
       const signUpDto = {
-        user_id: 'tes123',
-        username: 'tes123',
+        user_id: 'andi123',
+        username: 'andi123',
         password: 'password',
-        email: 'tes@gmail.com',
+        email: 'andi@gmail.com',
         is_active: true,
       };
 
@@ -191,7 +191,7 @@ describe('AuthController', () => {
 
     it('should login', async () => {
       const loginDto = {
-        user_idOrEmail: 'tes123',
+        user_idOrEmail: 'andi123',
         password: 'password',
       };
 
@@ -228,7 +228,7 @@ describe('AuthController', () => {
 
     it('should throw unauthorized if password is wrong', async () => {
       const loginDto = {
-        user_idOrEmail: 'tes123',
+        user_idOrEmail: 'andi123',
         password: 'passworda',
       };
 
