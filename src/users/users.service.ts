@@ -19,9 +19,7 @@ export class UsersService {
     return hashedPassword;
   }
 
-  async create(
-    createUserDto: CreateUserDto,
-  ): Promise<UserType & { password: string }> {
+  async create(createUserDto: CreateUserDto): Promise<UserType> {
     const hashedPassword = await this.hashPassword(createUserDto.password);
     const [createdUser] = await this.prisma.$transaction(
       [
