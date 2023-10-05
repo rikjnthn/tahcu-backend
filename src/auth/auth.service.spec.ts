@@ -194,20 +194,16 @@ describe('AuthService', () => {
       authService = module.get<AuthService>(AuthService);
     });
 
-    beforeAll(async () => {
-      await prismaService.$transaction([prismaService.users.deleteMany()]);
-    });
-
     it('should be defined', () => {
       expect(authService).toBeDefined();
     });
 
     it('should return object of access token when sign up and user should be created', async () => {
       const signUpDto = {
-        user_id: 'tes123',
+        user_id: 'tess123',
         username: 'tes123',
         password: 'password',
-        email: 'tes@gmail.com',
+        email: 'tess@gmail.com',
         is_active: true,
       };
 
