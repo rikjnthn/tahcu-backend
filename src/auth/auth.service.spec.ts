@@ -217,7 +217,7 @@ describe('AuthService', () => {
 
     it('should return object of access token when login', async () => {
       const loginDto = {
-        user_idOrEmail: 'tes123',
+        user_idOrEmail: 'tess123',
         password: 'password',
       };
 
@@ -228,7 +228,7 @@ describe('AuthService', () => {
 
     it('should return exception if user not found', async () => {
       const loginDto = {
-        user_idOrEmail: 'tess123',
+        user_idOrEmail: 'not_user',
         password: 'password',
       };
 
@@ -244,7 +244,7 @@ describe('AuthService', () => {
 
     it('should return exception if password is wrong', async () => {
       const loginDto = {
-        user_idOrEmail: 'tes123',
+        user_idOrEmail: 'tess123',
         password: 'passwords',
       };
 
