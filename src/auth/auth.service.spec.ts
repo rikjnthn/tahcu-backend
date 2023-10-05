@@ -84,18 +84,16 @@ describe('AuthService', () => {
         is_active: true,
       };
 
-      const mockObjectAcessToken = {
-        access_token: 'accesstoken',
-      };
+      const access_token = 'accesstoken';
 
-      jest.spyOn(authService, 'signUp').mockResolvedValue(mockObjectAcessToken);
+      jest.spyOn(authService, 'signUp').mockResolvedValue(access_token);
 
       const signUp = await authService.signUp(signUpDto);
 
       expect(authService.signUp).toBeCalled();
       expect(authService.signUp).toBeCalledWith(signUpDto);
 
-      expect(signUp).toEqual(mockObjectAcessToken);
+      expect(signUp).toEqual(access_token);
     });
 
     it('should retrun exception if sign up dto is not valid', async () => {
@@ -211,12 +209,12 @@ describe('AuthService', () => {
         is_active: true,
       };
 
-      const access_tokenObject = await authService.signUp(signUpDto);
+      const access_token = await authService.signUp(signUpDto);
 
       const user = await usersService.findOneId(signUpDto.user_id);
 
       expect(user).toBeDefined();
-      expect(access_tokenObject.access_token).toBeDefined();
+      expect(access_token).toBeDefined();
     });
 
     it('should return object of access token when login', async () => {
