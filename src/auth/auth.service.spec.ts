@@ -192,20 +192,16 @@ describe('AuthService', () => {
       authService = module.get<AuthService>(AuthService);
     });
 
-    beforeAll(async () => {
-      await prismaService.$transaction([prismaService.users.deleteMany()]);
-    });
-
     it('should be defined', () => {
       expect(authService).toBeDefined();
     });
 
     it('should return object of access token when sign up and user should be created', async () => {
       const signUpDto = {
-        user_id: 'tes123',
+        user_id: 'tess123',
         username: 'tes123',
         password: 'password',
-        email: 'tes@gmail.com',
+        email: 'tess@gmail.com',
         is_active: true,
       };
 
@@ -219,7 +215,7 @@ describe('AuthService', () => {
 
     it('should return object of access token when login', async () => {
       const loginDto = {
-        user_idOrEmail: 'tes123',
+        user_idOrEmail: 'tess123',
         password: 'password',
       };
 
@@ -230,7 +226,7 @@ describe('AuthService', () => {
 
     it('should return exception if user not found', async () => {
       const loginDto = {
-        user_idOrEmail: 'tess123',
+        user_idOrEmail: 'not_user',
         password: 'password',
       };
 
@@ -246,7 +242,7 @@ describe('AuthService', () => {
 
     it('should return exception if password is wrong', async () => {
       const loginDto = {
-        user_idOrEmail: 'tes123',
+        user_idOrEmail: 'tess123',
         password: 'passwords',
       };
 

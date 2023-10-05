@@ -199,14 +199,14 @@ describe('AuthController', () => {
         cookie: jest.fn() as any,
       } as Response;
 
-      expect(
-        await authController.login(loginDto, mockResponse),
-      ).toBeUndefined();
+      await expect(
+        authController.login(loginDto, mockResponse),
+      ).resolves.toBeUndefined();
     });
 
     it('should throw not found if user not found', async () => {
       const loginDto = {
-        user_idOrEmail: 'tess123',
+        user_idOrEmail: 'not_user',
         password: 'password',
       };
 
