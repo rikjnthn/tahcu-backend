@@ -172,6 +172,7 @@ describe('AuthService', () => {
   describe('Integration Test', () => {
     let authService: AuthService;
     let usersService: UsersService;
+    let prismaService: PrismaService;
 
     beforeAll(async () => {
       const module: TestingModule = await Test.createTestingModule({
@@ -188,8 +189,13 @@ describe('AuthService', () => {
         providers: [AuthService],
       }).compile();
 
+      prismaService = module.get<PrismaService>(PrismaService);
       usersService = module.get<UsersService>(UsersService);
       authService = module.get<AuthService>(AuthService);
+    });
+
+    beforeAll(async () => {
+      await prismaService.$transaction([prismaService.users.deleteMany()]);
     });
 
     it('should be defined', () => {
@@ -257,7 +263,6 @@ describe('AuthService', () => {
     });
 
     afterAll(async () => {
-      const prismaService = new PrismaService();
       await prismaService.$transaction([prismaService.users.deleteMany()]);
     });
   });
