@@ -1,7 +1,7 @@
 export interface UserType {
   id: string;
+  user_id: string;
   username: string;
-  password: string;
   email: string;
   is_active: boolean;
   created_at: Date;

@@ -1,6 +1,6 @@
 import {
   Injectable,
-  BadRequestException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -9,6 +9,8 @@ import { JwtService } from '@nestjs/jwt';
 
 import { UsersService } from 'src/users/users.service';
 import { UserType } from 'src/users/interface/user.interface';
+import { SignUpDto } from './dto/sign-up.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -17,14 +19,14 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(idOrEmail: string, password: string) {
-    const user = isEmail(idOrEmail)
-      ? await this.usersService.findOneEmail(idOrEmail)
-      : await this.usersService.findOneId(idOrEmail);
+  async validateUser({ user_idOrEmail, password }: LoginDto) {
+    const user = isEmail(user_idOrEmail)
+      ? await this.usersService.findOneEmail(user_idOrEmail)
+      : await this.usersService.findOneId(user_idOrEmail);
 
     if (!user)
-      throw new BadRequestException({
-        error: 'Bad Request Exception',
+      throw new NotFoundException({
+        error: 'User not found',
         meta: {
           user: 'User Not Found',
         },
@@ -46,6 +48,7 @@ export class AuthService {
   private async generateToken(user: UserType) {
     const payload = {
       id: user.id,
+      user_id: user.user_id,
       email: user.email,
       username: user.username,
       created_at: user.created_at,
@@ -57,7 +60,13 @@ export class AuthService {
     });
   }
 
-  async login(idOrEmail: string, password: string) {
-    return await this.validateUser(idOrEmail, password);
+  async login(loginDto: LoginDto) {
+    return await this.validateUser(loginDto);
+  }
+
+  async signUp(signUpDto: SignUpDto) {
+    const createdUser = await this.usersService.create(signUpDto);
+
+    return await this.generateToken(createdUser);
   }
 }
