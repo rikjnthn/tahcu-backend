@@ -28,6 +28,15 @@ export class UsersService {
             ...createUserDto,
             password: hashedPassword,
           },
+          select: {
+            id: true,
+            user_id: true,
+            username: true,
+            email: true,
+            is_active: true,
+            created_at: true,
+            updated_at: true,
+          },
         }),
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -36,10 +45,10 @@ export class UsersService {
     return createdUser;
   }
 
-  async findOneId(id: string) {
+  async findOneId(userId: string) {
     const user = await this.prisma.users.findFirst({
       where: {
-        id,
+        user_id: userId,
       },
     });
 
@@ -56,12 +65,21 @@ export class UsersService {
     return user;
   }
 
-  async find(id: string): Promise<UserType[]> {
+  async find(userId: string): Promise<UserType[]> {
     const users = this.prisma.users.findMany({
       where: {
-        id: {
-          startsWith: id,
+        user_id: {
+          startsWith: userId,
         },
+      },
+      select: {
+        id: true,
+        user_id: true,
+        username: true,
+        email: true,
+        is_active: true,
+        created_at: true,
+        updated_at: true,
       },
     });
 
@@ -85,6 +103,15 @@ export class UsersService {
             ...updateUserDto,
             password: hashedPassword,
             updated_at: new Date(),
+          },
+          select: {
+            id: true,
+            user_id: true,
+            username: true,
+            email: true,
+            is_active: true,
+            created_at: true,
+            updated_at: true,
           },
         }),
       ],
