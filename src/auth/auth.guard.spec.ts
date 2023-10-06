@@ -4,6 +4,7 @@ import { AuthGuard } from './auth.guard';
 import { UsersService } from 'src/users/users.service';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
+import { Socket } from 'socket.io';
 
 describe('AuthGuard', () => {
   describe('Unit Test', () => {
@@ -23,7 +24,7 @@ describe('AuthGuard', () => {
       expect(authGuard).toBeDefined();
     });
 
-    it('should return true if user is authorized', async () => {
+    it('should return true if user is authorized in http connection', async () => {
       const { is_active, ...payload } = await usersService.create({
         email: 'tes@gmail.com',
         is_active: true,
@@ -50,6 +51,9 @@ describe('AuthGuard', () => {
             },
           };
         },
+        getType: () => {
+          return 'http';
+        },
       } as ExecutionContext;
 
       const isPass = await authGuard.canActivate(contextMock);
@@ -57,7 +61,45 @@ describe('AuthGuard', () => {
       expect(isPass).toBeTruthy();
     });
 
-    it('should return false if token not valid', async () => {
+    it('should return true if user is authorized in ws connection', async () => {
+      const { is_active, ...payload } = await usersService.create({
+        email: 'dono@gmail.com',
+        is_active: true,
+        password: 'password',
+        user_id: 'dono123',
+        username: 'dono123',
+      });
+
+      const token = await jwtService.signAsync(payload, {
+        secret: process.env.JWT_SECRET,
+      });
+
+      const contextMock = {
+        switchToWs: () => {
+          return {
+            getClient() {
+              return {
+                handshake: {
+                  cookies: {
+                    access_token: token,
+                  },
+                  headers: {
+                    user: {},
+                  },
+                },
+              };
+            },
+          };
+        },
+        getType: () => 'ws',
+      } as ExecutionContext;
+
+      const isPass = await authGuard.canActivate(contextMock);
+
+      expect(isPass).toBeTruthy();
+    });
+
+    it('should return false if token not valid in http connection', async () => {
       const contextMock = {
         switchToHttp: () => {
           return {
@@ -72,6 +114,31 @@ describe('AuthGuard', () => {
             },
           };
         },
+        getType: () => 'http',
+      } as ExecutionContext;
+
+      await expect(authGuard.canActivate(contextMock)).rejects.toThrowError(
+        new UnauthorizedException(),
+      );
+    });
+
+    it('should return false if token not valid in ws connection', async () => {
+      const contextMock = {
+        switchToWs: () => {
+          return {
+            getClient() {
+              return {
+                handshake: {
+                  cookies: {
+                    access_token: 'false token',
+                  },
+                },
+              };
+            },
+          };
+        },
+
+        getType: () => 'ws',
       } as ExecutionContext;
 
       await expect(authGuard.canActivate(contextMock)).rejects.toThrowError(
