@@ -10,7 +10,7 @@ export class FindMessageDto {
   receiver_id: string;
 
   @IsNumber()
-  @Min(1)
+  @Min(0)
   @IsNotEmpty()
   lower_limit: number;
 }
