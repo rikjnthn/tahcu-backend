@@ -1,4 +1,4 @@
-import { IsDate, IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
 
 export class FindMessageDto {
   @IsString()
@@ -9,11 +9,8 @@ export class FindMessageDto {
   @IsNotEmpty()
   receiver_id: string;
 
-  @IsDate()
+  @IsNumber()
+  @Min(1)
   @IsNotEmpty()
-  uppper_limit: Date;
-
-  @IsDate()
-  @IsNotEmpty()
-  lower_limit: Date;
+  lower_limit: number;
 }
