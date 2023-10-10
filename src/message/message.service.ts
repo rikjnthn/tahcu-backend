@@ -24,23 +24,15 @@ export class MessageService {
     return createdMessage;
   }
 
-  async findAll({
-    sender_id,
-    receiver_id,
-    lower_limit,
-    uppper_limit,
-  }: FindMessageDto) {
+  async findAll({ sender_id, receiver_id, lower_limit }: FindMessageDto) {
     return await this.prismaService.message.findMany({
       where: {
         OR: [
           { sender_id, receiver_id },
           { sender_id: receiver_id, receiver_id: sender_id },
         ],
-        sent_at: {
-          gte: new Date(lower_limit),
-          lte: new Date(uppper_limit),
-        },
       },
+      skip: lower_limit,
     });
   }
 

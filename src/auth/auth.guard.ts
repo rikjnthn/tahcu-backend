@@ -8,9 +8,14 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { Socket } from 'socket.io';
 
+import { UsersService } from 'src/users/users.service';
+
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private userService: UsersService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     return context.getType() === 'http'
@@ -25,7 +30,7 @@ export class AuthGuard implements CanActivate {
 
     const payload = await this.verifyJwt(token);
 
-    request.user = payload;
+    request['user'] = payload;
 
     return true;
   }
@@ -37,7 +42,7 @@ export class AuthGuard implements CanActivate {
 
     const payload = await this.verifyJwt(token);
 
-    client.handshake.headers.user = payload;
+    client.handshake.headers['user'] = payload;
 
     return true;
   }
@@ -48,6 +53,9 @@ export class AuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: process.env.JWT_SECRET,
       });
+
+      if (!(await this.userService.findOneId(payload.user_id)))
+        throw new UnauthorizedException();
 
       return payload;
     } catch {
