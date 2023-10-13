@@ -295,8 +295,6 @@ describe('PrivateChatService', () => {
         },
       });
 
-      console.log(await prismaService.users.findMany());
-
       const requestMock = {
         user: {
           id: andi.id,
@@ -398,10 +396,7 @@ describe('PrivateChatService', () => {
     });
 
     afterAll(async () => {
-      await prismaService.$transaction([
-        prismaService.contact.deleteMany(),
-        prismaService.users.deleteMany(),
-      ]);
+      await prismaService.$transaction([prismaService.users.deleteMany()]);
     });
   });
 });
