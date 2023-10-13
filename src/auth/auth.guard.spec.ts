@@ -26,11 +26,11 @@ describe('AuthGuard', () => {
 
     it('should return true if user is authorized in http connection', async () => {
       const { is_active, ...payload } = await usersService.create({
-        email: 'tes@gmail.com',
+        email: 'nina@gmail.com',
         is_active: true,
         password: 'password',
-        user_id: 'tes123',
-        username: 'tes123',
+        user_id: 'nina123',
+        username: 'nina123',
       });
 
       const token = await jwtService.signAsync(payload, {
