@@ -37,17 +37,17 @@ import validationExceptionFactory from 'src/common/helper/validation-exception-f
 export class MessageGateway implements OnGatewayConnection {
   constructor(private readonly messageService: MessageService) {}
 
-  @SubscribeMessage('create-message')
+  @SubscribeMessage('create')
   async create(@MessageBody() createMessageDto: CreateMessageDto) {
     return await this.messageService.create(createMessageDto);
   }
 
-  @SubscribeMessage('find-all-messages')
+  @SubscribeMessage('find-all')
   async findAll(@MessageBody() findMessageDto: FindMessageDto) {
     return await this.messageService.findAll(findMessageDto);
   }
 
-  @SubscribeMessage('update-message')
+  @SubscribeMessage('update')
   async update(
     @MessageBody('id') id: string,
     @MessageBody('message') updateMessageDto: UpdateMessageDto,
@@ -55,7 +55,7 @@ export class MessageGateway implements OnGatewayConnection {
     return await this.messageService.update(id, updateMessageDto);
   }
 
-  @SubscribeMessage('remove-messages')
+  @SubscribeMessage('remove')
   async remove(@MessageBody('id') id: string[]) {
     return await this.messageService.remove(id);
   }
