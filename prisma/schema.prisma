@@ -11,12 +11,36 @@ datasource db {
 }
 
 model Users {
-  id         String   @id @default(uuid())
-  user_id    String   @unique
+  id         String   @id
   username   String
   password   String
   email      String   @unique
   is_active  Boolean
   created_at DateTime @default(now()) @db.Timestamptz()
   updated_at DateTime @default(now()) @db.Timestamptz()
+
+  group_membership GroupMembership[]
+  group            Group[]
+}
+
+model Group {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  created_at  DateTime @default(now()) @db.Timestamptz()
+
+  created_by       Users             @relation(fields: [created_by_id], references: [id])
+  created_by_id    String
+  group_membership GroupMembership[]
+}
+
+model GroupMembership {
+  id        String   @id @default(uuid())
+  user      Users    @relation(fields: [user_id], references: [id])
+  user_id   String
+  group     Group    @relation(fields: [group_id], references: [id])
+  group_id  String
+  joined_at DateTime @default(now()) @db.Timestamptz()
+
+  @@unique([user_id, group_id])
 }
