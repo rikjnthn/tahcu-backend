@@ -65,7 +65,7 @@ export class GroupMessageGateway implements OnGatewayConnection {
     @MessageBody('group_id') groupId: string,
     @User('id') userId: string,
   ) {
-    return this.groupMessageService.delete(ids, groupId, userId);
+    return await this.groupMessageService.delete(ids, groupId, userId);
   }
 
   handleConnection(client: Socket) {
