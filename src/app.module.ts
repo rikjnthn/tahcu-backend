@@ -4,6 +4,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { MessageModule } from './message/message.module';
 import { GroupMessageModule } from './group-message/group-message.module';
+import { GroupModule } from './group/group.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { GroupMessageModule } from './group-message/group-message.module';
     AuthModule,
     MessageModule,
     GroupMessageModule,
+    GroupModule,
   ],
 })
 export class AppModule {}
