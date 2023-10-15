@@ -52,16 +52,20 @@ export class GroupMessageGateway implements OnGatewayConnection {
   }
 
   @SubscribeMessage('update')
-  async update(@MessageBody() updateGroupMessageDto: UpdateGroupMessageDto) {
-    return await this.groupMessageService.update(updateGroupMessageDto);
+  async update(
+    @MessageBody() updateGroupMessageDto: UpdateGroupMessageDto,
+    @User('id') userId: string,
+  ) {
+    return await this.groupMessageService.update(updateGroupMessageDto, userId);
   }
 
   @SubscribeMessage('delete')
   async delete(
     @MessageBody('ids') ids: string[],
     @MessageBody('group_id') groupId: string,
+    @User('id') userId: string,
   ) {
-    return this.groupMessageService.delete(ids, groupId);
+    return this.groupMessageService.delete(ids, groupId, userId);
   }
 
   handleConnection(client: Socket) {

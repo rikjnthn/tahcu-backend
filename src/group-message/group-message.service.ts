@@ -31,13 +31,17 @@ export class GroupMessageService {
     });
   }
 
-  async update(updateGroupMessageDto: UpdateGroupMessageDto) {
+  async update(
+    updateGroupMessageDto: UpdateGroupMessageDto,
+    sender_id: string,
+  ) {
     const { group_id, message, message_id } = updateGroupMessageDto;
     const [updatedMessage] = await this.prismaService.$transaction([
       this.prismaService.message.update({
         where: {
           id: message_id,
           group_id,
+          sender_id,
         },
         data: {
           message,
@@ -48,13 +52,14 @@ export class GroupMessageService {
     return updatedMessage;
   }
 
-  async delete(ids: string[], group_id) {
+  async delete(ids: string[], group_id: string, sender_id: string) {
     this.prismaService.$transaction(
       ids.map((id) =>
         this.prismaService.message.delete({
           where: {
             group_id,
             id,
+            sender_id,
           },
         }),
       ),
