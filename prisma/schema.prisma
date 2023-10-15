@@ -12,15 +12,18 @@ datasource db {
 
 model Users {
   id         String   @id
+  user_id    String
   username   String
   password   String
-  email      String   @unique
+  email      String
   is_active  Boolean
   created_at DateTime @default(now()) @db.Timestamptz()
   updated_at DateTime @default(now()) @db.Timestamptz()
 
   group_membership GroupMembership[]
   group            Group[]
+
+  @@unique([user_id, email])
 }
 
 model Group {
