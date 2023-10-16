@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { WsException } from '@nestjs/websockets';
 
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { CreateGroupMessageDto } from './dto/create-group-message.dto';
 import { FindGroupMessageDto } from './dto/find-group-message.dto';
 import { UpdateGroupMessageDto } from './dto/update-group-message.dto';
-import { WsException } from '@nestjs/websockets';
 
 @Injectable()
 export class GroupMessageService {

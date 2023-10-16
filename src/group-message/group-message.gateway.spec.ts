@@ -21,7 +21,7 @@ describe('GroupMessageGateway', () => {
     });
 
     it('should be defined', () => {
-      expect(GroupMessageGateway).toBeDefined();
+      expect(groupMessageGateway).toBeDefined();
     });
 
     it('should create message and return record', async () => {
