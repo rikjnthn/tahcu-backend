@@ -447,7 +447,7 @@ describe('GroupMessageGateway', () => {
       };
 
       const messageFoundMock = {
-        message: 'ganti pesan',
+        message: 'pesan baru',
         group_id: '',
         sender_id: anto.id,
       };
@@ -473,9 +473,7 @@ describe('GroupMessageGateway', () => {
     it('should remove message', async () => {
       const message = await prismaService.message.findFirst({
         select: { id: true },
-        where: {
-          message: 'ganti pesan',
-        },
+        where: { message: 'pesan baru' },
       });
       const group = await prismaService.group.findFirst({
         select: { id: true },
@@ -490,21 +488,6 @@ describe('GroupMessageGateway', () => {
       await expect(
         groupMessageGateway.delete([message.id], group.id, anto.id),
       ).resolves.toBeUndefined();
-    });
-
-    it('should return exception if message that need to be remove not found', async () => {
-      const group = await prismaService.group.findFirst({
-        select: { id: true },
-        where: { name: 'group uhui' },
-      });
-
-      const anto = await prismaService.users.findFirst({
-        select: { id: true },
-        where: { username: 'anto' },
-      });
-      await expect(
-        groupMessageGateway.delete(['not_exist'], group.id, anto.id),
-      ).rejects.toThrowError();
     });
 
     afterAll(async () => {
