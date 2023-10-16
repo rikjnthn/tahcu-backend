@@ -46,17 +46,28 @@ export class GroupController {
   }
 
   @Patch('add-members')
-  async addMembers(@Body() addMemberDto: AddMemberDto) {
-    return await this.groupService.addMembers(addMemberDto);
+  async addMembers(
+    @Body() addMemberDto: AddMemberDto,
+    @User('id') userId: string,
+  ) {
+    return await this.groupService.addMembers(addMemberDto, userId);
   }
 
   @Delete('delete-member')
-  async deleteMembers(@Body() deleteMemberDto: DeleteMemberDto) {
-    return await this.groupService.deleteMembers(deleteMemberDto);
+  async deleteMembers(
+    @Body() deleteMemberDto: DeleteMemberDto,
+    @User('id') userId: string,
+  ) {
+    return await this.groupService.deleteMembers(deleteMemberDto, userId);
+  }
+
+  @Delete('exit-group')
+  async exitGroup(@Body('id') groupId: string, @User('id') userId: string) {
+    await this.groupService.exitGroup(groupId, userId);
   }
 
   @Delete()
-  async remove(@Body('id') id: string) {
-    return await this.groupService.remove(id);
+  async remove(@Body('id') groupId: string, @User('id') userId: string) {
+    return await this.groupService.remove(groupId, userId);
   }
 }

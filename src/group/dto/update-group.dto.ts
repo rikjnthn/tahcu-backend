@@ -6,4 +6,7 @@ export class UpdateGroupDto {
 
   @IsString()
   name?: string;
+
+  @IsString()
+  new_admin?: string;
 }
