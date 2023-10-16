@@ -4,12 +4,21 @@ import { PrismaService } from 'src/common/prisma/prisma.service';
 import { CreateGroupMessageDto } from './dto/create-group-message.dto';
 import { FindGroupMessageDto } from './dto/find-group-message.dto';
 import { UpdateGroupMessageDto } from './dto/update-group-message.dto';
+import { WsException } from '@nestjs/websockets';
 
 @Injectable()
 export class GroupMessageService {
   constructor(private prismaService: PrismaService) {}
 
   async create(createGroupMessageDto: CreateGroupMessageDto, userId: string) {
+    const isGroupExist = await this.prismaService.group.findFirst({
+      where: {
+        id: createGroupMessageDto.group_id,
+      },
+    });
+
+    if (!isGroupExist) throw new WsException('Group is not exist');
+
     const createdMessage = await this.prismaService.message.create({
       data: {
         ...createGroupMessageDto,
@@ -57,8 +66,8 @@ export class GroupMessageService {
       ids.map((id) =>
         this.prismaService.message.delete({
           where: {
-            group_id,
             id,
+            group_id,
             sender_id,
           },
         }),
