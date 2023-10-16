@@ -11,7 +11,7 @@ datasource db {
 }
 
 model Users {
-  id         String   @id
+  id         String   @id             @default(uuid())
   user_id    String
   username   String
   password   String
@@ -21,18 +21,20 @@ model Users {
   updated_at DateTime @default(now()) @db.Timestamptz()
 
   group_membership GroupMembership[]
-  group            Group[]
+  group            Group[]           @relation("group")
+  admin            Group[]           @relation("admin")
 
   @@unique([user_id, email])
 }
 
 model Group {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  created_at  DateTime @default(now()) @db.Timestamptz()
-
-  created_by       Users             @relation(fields: [created_by_id], references: [id])
+  id               String            @id @default(uuid())
+  name             String
+  description      String?
+  created_at       DateTime          @default(now()) @db.Timestamptz()
+  admin            Users             @relation("admin", fields: [admin_id], references: [id])
+  admin_id         String
+  created_by       Users             @relation("group", fields: [created_by_id], references: [id])
   created_by_id    String
   group_membership GroupMembership[]
 }
