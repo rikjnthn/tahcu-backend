@@ -50,7 +50,7 @@ export class GroupService {
   async updateGroup(groupId: string, updateGroupDto: UpdateGroupDto) {
     const { description, name, new_admin } = updateGroupDto;
 
-    const updatedGroup = await this.prismaService.$transaction([
+    const [updatedGroup] = await this.prismaService.$transaction([
       this.prismaService.group.update({
         where: { id: groupId },
         data: {
