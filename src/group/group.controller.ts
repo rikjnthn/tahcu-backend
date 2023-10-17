@@ -33,8 +33,8 @@ export class GroupController {
   }
 
   @Get()
-  async findAll() {
-    return await this.groupService.findAll();
+  async findAll(@User('id') userId: string) {
+    return await this.groupService.findAll(userId);
   }
 
   @Patch('create-group')

@@ -33,8 +33,15 @@ export class GroupService {
     return createdGroup;
   }
 
-  async findAll() {
+  async findAll(user_id: string) {
     const groups = await this.prismaService.group.findMany({
+      where: {
+        group_membership: {
+          every: {
+            user_id,
+          },
+        },
+      },
       include: { group_membership: true },
     });
     return groups;
