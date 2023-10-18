@@ -41,8 +41,9 @@ export class GroupController {
   async updateGroup(
     @Body('id') id: string,
     @Body('data') updateGroupDto: UpdateGroupDto,
+    @User('id') userId: string,
   ) {
-    return await this.groupService.updateGroup(id, updateGroupDto);
+    return await this.groupService.updateGroup(id, updateGroupDto, userId);
   }
 
   @Patch('add-members')

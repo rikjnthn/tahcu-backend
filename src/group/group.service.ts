@@ -47,8 +47,23 @@ export class GroupService {
     return groups;
   }
 
-  async updateGroup(groupId: string, updateGroupDto: UpdateGroupDto) {
+  async updateGroup(
+    groupId: string,
+    updateGroupDto: UpdateGroupDto,
+    user_id: string,
+  ) {
     const { description, name, new_admin } = updateGroupDto;
+
+    const { admin_id } = await this.prismaService.group.findFirst({
+      where: {
+        id: groupId,
+      },
+    });
+
+    if (admin_id !== user_id)
+      throw new UnauthorizedException(
+        'You were not permitted to delete this group',
+      );
 
     const [updatedGroup] = await this.prismaService.$transaction([
       this.prismaService.group.update({
