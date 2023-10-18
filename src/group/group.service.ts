@@ -76,7 +76,7 @@ export class GroupService {
         'You were not permitted to add member this group',
       );
 
-    const updatedMember = await this.prismaService.$transaction(
+    const addedMember = await this.prismaService.$transaction(
       members.map((member) =>
         this.prismaService.groupMembership.create({
           data: {
@@ -87,7 +87,7 @@ export class GroupService {
       ),
     );
 
-    return updatedMember;
+    return addedMember;
   }
 
   async deleteMembers(deleteMemberDto: DeleteMemberDto, user_id: string) {
