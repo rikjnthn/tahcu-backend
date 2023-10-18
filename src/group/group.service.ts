@@ -103,11 +103,11 @@ export class GroupService {
       );
 
     await this.prismaService.$transaction(
-      memberships.map((membership) =>
+      memberships.map((id) =>
         this.prismaService.groupMembership.delete({
           where: {
             group_id,
-            id: membership,
+            id,
           },
         }),
       ),
