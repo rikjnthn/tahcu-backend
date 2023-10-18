@@ -102,7 +102,7 @@ export class GroupService {
         'You were not permitted to add member this group',
       );
 
-    const updatedMember = await this.prismaService.$transaction(
+    await this.prismaService.$transaction(
       memberships.map((membership) =>
         this.prismaService.groupMembership.delete({
           where: {
@@ -112,6 +112,12 @@ export class GroupService {
         }),
       ),
     );
+
+    const updatedMember = await this.prismaService.groupMembership.findMany({
+      where: {
+        group_id,
+      },
+    });
 
     return updatedMember;
   }
