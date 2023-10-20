@@ -106,7 +106,7 @@ export class GroupService {
   }
 
   async deleteMembers(deleteMemberDto: DeleteMemberDto, user_id: string) {
-    const { group_id, memberships } = deleteMemberDto;
+    const { group_id, members } = deleteMemberDto;
 
     const { admin_id } = await this.prismaService.group.findFirst({
       where: { id: group_id },
@@ -118,7 +118,7 @@ export class GroupService {
       );
 
     await this.prismaService.$transaction(
-      memberships.map((id) =>
+      members.map((id) =>
         this.prismaService.groupMembership.delete({
           where: {
             group_id,
@@ -161,9 +161,6 @@ export class GroupService {
       );
 
     await this.prismaService.$transaction([
-      this.prismaService.groupMembership.deleteMany({
-        where: { group_id: groupId },
-      }),
       this.prismaService.group.deleteMany({
         where: { id: groupId },
       }),
