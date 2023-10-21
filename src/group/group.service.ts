@@ -37,7 +37,7 @@ export class GroupService {
     const groups = await this.prismaService.group.findMany({
       where: {
         group_membership: {
-          every: {
+          some: {
             user_id,
           },
         },
