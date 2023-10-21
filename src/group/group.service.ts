@@ -121,8 +121,10 @@ export class GroupService {
       members.map((id) =>
         this.prismaService.groupMembership.delete({
           where: {
-            group_id,
-            id,
+            user_id_group_id: {
+              group_id,
+              user_id: id,
+            },
           },
         }),
       ),
