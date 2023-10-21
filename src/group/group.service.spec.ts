@@ -419,7 +419,6 @@ describe('GroupService', () => {
             },
           }),
         ],
-        controllers: [GroupController],
         providers: [GroupService],
       }).compile();
 
