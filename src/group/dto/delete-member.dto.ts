@@ -12,5 +12,5 @@ export class DeleteMemberDto {
   @IsNotEmpty({
     each: true,
   })
-  memberships: string[];
+  members: string[];
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -18,6 +18,7 @@ export class GroupService {
         data: {
           description,
           name,
+          admin_id: userId,
           created_by_id: userId,
           group_membership: {
             createMany: {
@@ -25,33 +26,52 @@ export class GroupService {
             },
           },
         },
-        include: {
-          group_membership: true,
-        },
+        include: { group_membership: true },
       }),
     ]);
 
     return createdGroup;
   }
 
-  async findAll() {
+  async findAll(user_id: string) {
     const groups = await this.prismaService.group.findMany({
-      include: {
-        group_membership: true,
+      where: {
+        group_membership: {
+          some: {
+            user_id,
+          },
+        },
       },
+      include: { group_membership: true },
     });
     return groups;
   }
 
-  async updateGroup(groupId: string, updateGroupDto: UpdateGroupDto) {
-    const { description, name } = updateGroupDto;
+  async updateGroup(
+    groupId: string,
+    updateGroupDto: UpdateGroupDto,
+    user_id: string,
+  ) {
+    const { description, name, new_admin } = updateGroupDto;
 
-    const updatedGroup = await this.prismaService.$transaction([
+    const { admin_id } = await this.prismaService.group.findFirst({
+      where: {
+        id: groupId,
+      },
+    });
+
+    if (admin_id !== user_id)
+      throw new UnauthorizedException(
+        'You were not permitted to delete this group',
+      );
+
+    const [updatedGroup] = await this.prismaService.$transaction([
       this.prismaService.group.update({
         where: { id: groupId },
         data: {
           description,
           name,
+          admin_id: new_admin,
         },
       }),
     ]);
@@ -59,9 +79,19 @@ export class GroupService {
     return updatedGroup;
   }
 
-  async addMembers(addMemberDto: AddMemberDto) {
+  async addMembers(addMemberDto: AddMemberDto, user_id: string) {
     const { group_id, members } = addMemberDto;
-    const updatedMember = await this.prismaService.$transaction(
+
+    const { admin_id } = await this.prismaService.group.findFirst({
+      where: { id: group_id },
+    });
+
+    if (admin_id !== user_id)
+      throw new UnauthorizedException(
+        'You were not permitted to add member this group',
+      );
+
+    const addedMember = await this.prismaService.$transaction(
       members.map((member) =>
         this.prismaService.groupMembership.create({
           data: {
@@ -72,31 +102,67 @@ export class GroupService {
       ),
     );
 
-    return updatedMember;
+    return addedMember;
   }
 
-  async deleteMembers(deleteMemberDto: DeleteMemberDto) {
-    const { group_id, memberships } = deleteMemberDto;
+  async deleteMembers(deleteMemberDto: DeleteMemberDto, user_id: string) {
+    const { group_id, members } = deleteMemberDto;
 
-    const updatedMember = await this.prismaService.$transaction(
-      memberships.map((membership) =>
+    const { admin_id } = await this.prismaService.group.findFirst({
+      where: { id: group_id },
+    });
+
+    if (admin_id !== user_id)
+      throw new UnauthorizedException(
+        'You were not permitted to add member this group',
+      );
+
+    await this.prismaService.$transaction(
+      members.map((id) =>
         this.prismaService.groupMembership.delete({
           where: {
-            group_id,
-            id: membership,
+            user_id_group_id: {
+              group_id,
+              user_id: id,
+            },
           },
         }),
       ),
     );
 
+    const updatedMember = await this.prismaService.groupMembership.findMany({
+      where: {
+        group_id,
+      },
+    });
+
     return updatedMember;
   }
 
-  async remove(groupId: string) {
+  async exitGroup(group_id: string, user_id: string) {
+    await this.prismaService.groupMembership.delete({
+      where: {
+        user_id_group_id: {
+          group_id,
+          user_id,
+        },
+      },
+    });
+  }
+
+  async remove(groupId: string, user_id: string) {
+    const { admin_id } = await this.prismaService.group.findFirst({
+      where: {
+        id: groupId,
+      },
+    });
+
+    if (admin_id !== user_id)
+      throw new UnauthorizedException(
+        'You were not permitted to delete this group',
+      );
+
     await this.prismaService.$transaction([
-      this.prismaService.groupMembership.deleteMany({
-        where: { group_id: groupId },
-      }),
       this.prismaService.group.deleteMany({
         where: { id: groupId },
       }),
