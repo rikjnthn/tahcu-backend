@@ -12,18 +12,46 @@ datasource db {
 
 model Users {
   id         String   @id @default(uuid())
-  user_id    String   @unique
+  user_id    String
   username   String
   password   String
-  email      String   @unique
+  email      String
   is_active  Boolean
   created_at DateTime @default(now()) @db.Timestamptz()
   updated_at DateTime @default(now()) @db.Timestamptz()
 
-  sent_message    Message[] @relation("sender")
-  receive_message Message[] @relation("receiver")
-  contact         Contact[] @relation("contact")
-  friends         Contact[] @relation("friends")
+  sent_message     Message[]         @relation("sender")
+  receive_message  Message[]         @relation("receiver")
+  contact          Contact[]         @relation("contact")
+  friends          Contact[]         @relation("friends")
+  group_membership GroupMembership[]
+  group            Group[]           @relation("group")
+  admin            Group[]           @relation("admin")
+
+  @@unique([user_id, email])
+}
+
+model Group {
+  id               String            @id @default(uuid())
+  name             String
+  description      String?
+  created_at       DateTime          @default(now()) @db.Timestamptz()
+  admin            Users             @relation("admin", fields: [admin_id], references: [id], onDelete: NoAction)
+  admin_id         String
+  created_by       Users             @relation("group", fields: [created_by_id], references: [id], onDelete: NoAction)
+  created_by_id    String
+  group_membership GroupMembership[]
+}
+
+model GroupMembership {
+  id        String   @id @default(uuid())
+  user      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id   String
+  group     Group    @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  group_id  String
+  joined_at DateTime @default(now()) @db.Timestamptz()
+
+  @@unique([user_id, group_id])
 }
 
 model Message {

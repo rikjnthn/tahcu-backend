@@ -1,10 +1,9 @@
 import {
   ArgumentsHost,
   Catch,
-  ExceptionFilter,
   HttpStatus,
 } from '@nestjs/common';
-import { WsException, BaseWsExceptionFilter } from '@nestjs/websockets';
+import { BaseWsExceptionFilter } from '@nestjs/websockets';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { Socket } from 'socket.io';
 
