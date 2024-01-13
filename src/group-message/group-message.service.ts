@@ -5,12 +5,16 @@ import { PrismaService } from 'src/common/prisma/prisma.service';
 import { CreateGroupMessageDto } from './dto/create-group-message.dto';
 import { FindGroupMessageDto } from './dto/find-group-message.dto';
 import { UpdateGroupMessageDto } from './dto/update-group-message.dto';
+import { GroupMessageType } from './interface/group-message.interface';
 
 @Injectable()
 export class GroupMessageService {
   constructor(private prismaService: PrismaService) {}
 
-  async create(createGroupMessageDto: CreateGroupMessageDto, userId: string) {
+  async create(
+    createGroupMessageDto: CreateGroupMessageDto,
+    userId: string,
+  ): Promise<GroupMessageType> {
     const isGroupExist = await this.prismaService.group.findFirst({
       where: {
         id: createGroupMessageDto.group_id,
@@ -29,7 +33,9 @@ export class GroupMessageService {
     return createdMessage;
   }
 
-  async findAll(findGroupMessageDto: FindGroupMessageDto) {
+  async findAll(
+    findGroupMessageDto: FindGroupMessageDto,
+  ): Promise<GroupMessageType[]> {
     const { group_id, skip } = findGroupMessageDto;
     return await this.prismaService.message.findMany({
       where: {
@@ -43,7 +49,7 @@ export class GroupMessageService {
   async update(
     updateGroupMessageDto: UpdateGroupMessageDto,
     sender_id: string,
-  ) {
+  ): Promise<GroupMessageType> {
     const { group_id, message, message_id } = updateGroupMessageDto;
     const [updatedMessage] = await this.prismaService.$transaction([
       this.prismaService.message.update({
@@ -61,7 +67,11 @@ export class GroupMessageService {
     return updatedMessage;
   }
 
-  async delete(ids: string[], group_id: string, sender_id: string) {
+  async delete(
+    ids: string[],
+    group_id: string,
+    sender_id: string,
+  ): Promise<void> {
     this.prismaService.$transaction(
       ids.map((id) =>
         this.prismaService.message.delete({

@@ -45,20 +45,19 @@ export class UsersService {
     return createdUser;
   }
 
-  async findOneId(userId: string) {
-    const user = await this.prisma.users.findFirst({
+  async findOne(id: string): Promise<UserType> {
+    const user = await this.prisma.users.findFirstOrThrow({
       where: {
-        user_id: userId,
+        id,
       },
-    });
-
-    return user;
-  }
-
-  async findOneEmail(email: string) {
-    const user = await this.prisma.users.findFirst({
-      where: {
-        email,
+      select: {
+        id: true,
+        user_id: true,
+        username: true,
+        email: true,
+        is_active: true,
+        created_at: true,
+        updated_at: true,
       },
     });
 

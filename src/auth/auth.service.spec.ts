@@ -9,6 +9,7 @@ import { UsersService } from 'src/users/users.service';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { UsersModule } from 'src/users/users.module';
+import { PrismaModule } from 'src/common/prisma/prisma.module';
 
 describe('AuthService', () => {
   describe('Unit Test', () => {
@@ -22,7 +23,7 @@ describe('AuthService', () => {
       prismaService = new PrismaService();
       usersService = new UsersService(prismaService);
 
-      authService = new AuthService(usersService, jwtService);
+      authService = new AuthService(usersService, prismaService, jwtService);
     });
 
     it('should return object of access token when login', async () => {
@@ -81,6 +82,7 @@ describe('AuthService', () => {
         username: 'tes123',
         password: 'password',
         email: 'tes@gmail.com',
+        phone_number: '08123456789',
         is_active: true,
       };
 
@@ -102,6 +104,7 @@ describe('AuthService', () => {
         username: '',
         password: '',
         email: '',
+        phone_number: '',
         is_active: undefined,
       };
 
@@ -169,7 +172,6 @@ describe('AuthService', () => {
 
   describe('Integration Test', () => {
     let authService: AuthService;
-    let usersService: UsersService;
     let prismaService: PrismaService;
 
     beforeAll(async () => {
@@ -183,12 +185,12 @@ describe('AuthService', () => {
               expiresIn: process.env.JWT_EXPIRED,
             },
           }),
+          PrismaModule,
         ],
         providers: [AuthService],
       }).compile();
 
       prismaService = module.get<PrismaService>(PrismaService);
-      usersService = module.get<UsersService>(UsersService);
       authService = module.get<AuthService>(AuthService);
     });
 
@@ -202,12 +204,15 @@ describe('AuthService', () => {
         username: 'budi123',
         password: 'password',
         email: 'budi@gmail.com',
+        phone_number: '08123456789',
         is_active: true,
       };
 
       const access_token = await authService.signUp(signUpDto);
 
-      const user = await usersService.findOneId(signUpDto.user_id);
+      const user = await prismaService.users.findFirst({
+        where: { username: signUpDto.username },
+      });
 
       expect(user).toBeDefined();
       expect(access_token).toBeDefined();

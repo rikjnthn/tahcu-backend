@@ -17,7 +17,7 @@ describe('AuthGuard', () => {
       prismaService = new PrismaService();
       jwtService = new JwtService();
       usersService = new UsersService(prismaService);
-      authGuard = new AuthGuard(jwtService, usersService);
+      authGuard = new AuthGuard(jwtService, prismaService);
     });
 
     it('should be defined', () => {
@@ -26,11 +26,12 @@ describe('AuthGuard', () => {
 
     it('should return true if user is authorized in http connection', async () => {
       const { is_active, ...payload } = await usersService.create({
-        email: 'nina@gmail.com',
+        email: 'tes@gmail.com',
+        phone_number: '08123456789',
         is_active: true,
         password: 'password',
-        user_id: 'nina123',
-        username: 'nina123',
+        user_id: 'tes123',
+        username: 'tes123',
       });
 
       const token = await jwtService.signAsync(payload, {
@@ -64,6 +65,7 @@ describe('AuthGuard', () => {
     it('should return true if user is authorized in ws connection', async () => {
       const { is_active, ...payload } = await usersService.create({
         email: 'dono@gmail.com',
+        phone_number: '08123456789',
         is_active: true,
         password: 'password',
         user_id: 'dono123',

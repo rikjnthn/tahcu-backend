@@ -11,6 +11,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from 'src/users/users.service';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { UsersModule } from 'src/users/users.module';
+import { PrismaModule } from 'src/common/prisma/prisma.module';
 
 describe('AuthController', () => {
   describe('Unit Testing', () => {
@@ -25,7 +26,7 @@ describe('AuthController', () => {
       usersService = new UsersService(prismaService);
       jwtService = new JwtService();
 
-      authService = new AuthService(usersService, jwtService);
+      authService = new AuthService(usersService, prismaService, jwtService);
       authController = new AuthController(authService);
     });
 
@@ -97,6 +98,7 @@ describe('AuthController', () => {
         username: 'tes123',
         password: 'password',
         email: 'tes@gmail.com',
+        phone_number: '08123456789',
         is_active: true,
       };
 
@@ -120,6 +122,7 @@ describe('AuthController', () => {
         username: '',
         password: '',
         email: '',
+        phone_number: '',
         is_active: undefined,
       };
 
@@ -139,7 +142,7 @@ describe('AuthController', () => {
 
   describe('Integration Testing', () => {
     let authController: AuthController;
-    let usersService: UsersService;
+    let prismaService: PrismaService;
 
     beforeAll(async () => {
       const module: TestingModule = await Test.createTestingModule({
@@ -152,12 +155,13 @@ describe('AuthController', () => {
               expiresIn: process.env.JWT_EXPIRED,
             },
           }),
+          PrismaModule,
         ],
         providers: [AuthService],
         controllers: [AuthController],
       }).compile();
 
-      usersService = module.get<UsersService>(UsersService);
+      prismaService = module.get<PrismaService>(PrismaService);
 
       authController = module.get<AuthController>(AuthController);
     });
@@ -172,6 +176,7 @@ describe('AuthController', () => {
         username: 'andi123',
         password: 'password',
         email: 'andi@gmail.com',
+        phone_number: '08123456789',
         is_active: true,
       };
 
@@ -181,7 +186,9 @@ describe('AuthController', () => {
 
       await authController.signUp(signUpDto, mockResponse);
 
-      const user = await usersService.findOneEmail(signUpDto.email);
+      const user = await prismaService.users.findFirst({
+        where: { username: signUpDto.username },
+      });
 
       expect(user.email).toBe(signUpDto.email);
       expect(user.user_id).toBe(signUpDto.user_id);

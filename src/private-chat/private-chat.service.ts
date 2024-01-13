@@ -4,12 +4,13 @@ import { CreatePrivateChatDto } from './dto/create-private-chat.dto';
 import { UpdatePrivateChatDto } from './dto/update-private-chat.dto';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { RequestUser } from 'src/common/interface/request-user.interface';
+import { ChatType } from './interface/private-chat.interface';
 
 @Injectable()
 export class PrivateChatService {
   constructor(private prismaService: PrismaService) {}
 
-  async create(createPrivateChatDto: CreatePrivateChatDto) {
+  async create(createPrivateChatDto: CreatePrivateChatDto): Promise<ChatType> {
     if (createPrivateChatDto.friends_id === createPrivateChatDto.user_id) {
       throw new HttpException(
         {
@@ -29,7 +30,7 @@ export class PrivateChatService {
     return createdChat;
   }
 
-  async findAll(request: Request) {
+  async findAll(request: Request): Promise<ChatType[]> {
     const user = request.user as RequestUser;
     const user_id = user.id;
     return await this.prismaService.contact.findMany({
@@ -39,7 +40,10 @@ export class PrivateChatService {
     });
   }
 
-  async update(id: string, updatePrivateChatDto: UpdatePrivateChatDto) {
+  async update(
+    id: string,
+    updatePrivateChatDto: UpdatePrivateChatDto,
+  ): Promise<ChatType> {
     if (updatePrivateChatDto.friends_id === updatePrivateChatDto.user_id) {
       throw new HttpException(
         {
@@ -61,7 +65,7 @@ export class PrivateChatService {
     return updatedChat;
   }
 
-  async remove(ids: string[]) {
+  async remove(ids: string[]): Promise<void> {
     await this.prismaService.$transaction(
       ids.map((id) =>
         this.prismaService.contact.delete({

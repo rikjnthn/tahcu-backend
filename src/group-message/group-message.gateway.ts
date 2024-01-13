@@ -22,6 +22,7 @@ import { CreateGroupMessageDto } from './dto/create-group-message.dto';
 import { FindGroupMessageDto } from './dto/find-group-message.dto';
 import { User } from 'src/common/decorator/User.decorator';
 import { UpdateGroupMessageDto } from './dto/update-group-message.dto';
+import { GroupMessageType } from './interface/group-message.interface';
 
 @WebSocketGateway(8080, {
   transports: ['websocket'],
@@ -42,12 +43,14 @@ export class GroupMessageGateway implements OnGatewayConnection {
   async create(
     @MessageBody() createGroupMessageDto: CreateGroupMessageDto,
     @User('id') userId: string,
-  ) {
+  ): Promise<GroupMessageType> {
     return await this.groupMessageService.create(createGroupMessageDto, userId);
   }
 
   @SubscribeMessage('find-all')
-  async findAll(@MessageBody() findGroupMessageDto: FindGroupMessageDto) {
+  async findAll(
+    @MessageBody() findGroupMessageDto: FindGroupMessageDto,
+  ): Promise<GroupMessageType[]> {
     return await this.groupMessageService.findAll(findGroupMessageDto);
   }
 
@@ -55,7 +58,7 @@ export class GroupMessageGateway implements OnGatewayConnection {
   async update(
     @MessageBody() updateGroupMessageDto: UpdateGroupMessageDto,
     @User('id') userId: string,
-  ) {
+  ): Promise<GroupMessageType> {
     return await this.groupMessageService.update(updateGroupMessageDto, userId);
   }
 
@@ -64,11 +67,11 @@ export class GroupMessageGateway implements OnGatewayConnection {
     @MessageBody('ids') ids: string[],
     @MessageBody('group_id') groupId: string,
     @User('id') userId: string,
-  ) {
-    return await this.groupMessageService.delete(ids, groupId, userId);
+  ): Promise<void> {
+    await this.groupMessageService.delete(ids, groupId, userId);
   }
 
-  handleConnection(client: Socket) {
+  handleConnection(client: Socket): void {
     const request = client.handshake;
 
     const cookie = request.headers.cookie;

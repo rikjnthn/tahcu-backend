@@ -254,6 +254,7 @@ describe('groupMessageService', () => {
           data: {
             name: 'group uhui',
             created_by_id: anto.id,
+            admin_id: anto.id,
             description: 'group baru euy',
             group_membership: {
               createMany: {

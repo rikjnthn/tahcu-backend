@@ -6,6 +6,9 @@ import {
   Delete,
   UseFilters,
   UseGuards,
+  Param,
+  HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -20,7 +23,14 @@ import { User } from 'src/common/decorator/user.decorator';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get(':id')
+  @HttpCode(HttpStatus.FOUND)
+  async findOne(@Param('id') id: string): Promise<UserType> {
+    return await this.usersService.findOne(id);
+  }
+
   @Get()
+  @HttpCode(HttpStatus.FOUND)
   async find(@Body('user_id') userId: string): Promise<UserType[]> {
     return await this.usersService.find(userId);
   }

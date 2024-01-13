@@ -22,6 +22,7 @@ describe('UsersService', () => {
     it('should create users and return records', async () => {
       const createUserDto = {
         email: 'tes@gmail.com',
+        phone_number: '08123456789',
         is_active: true,
         password: 'password',
         user_id: 'tes123',
@@ -31,6 +32,7 @@ describe('UsersService', () => {
       const createdUserMock = {
         id: '1',
         email: 'tes@gmail.com',
+        phone_number: '08123456789',
         is_active: true,
         user_id: 'tes123',
         username: 'tes123',
@@ -93,48 +95,20 @@ describe('UsersService', () => {
         updated_at: new Date(),
       };
 
-      jest.spyOn(usersService, 'findOneId').mockResolvedValue(userFoundMock);
+      jest.spyOn(usersService, 'findOne').mockResolvedValue(userFoundMock);
 
-      const user = await usersService.findOneId('tes123');
+      const user = await usersService.findOne('tes123');
 
-      expect(usersService.findOneId);
-      expect(usersService.findOneId).toBeCalledWith('tes123');
+      expect(usersService.findOne);
+      expect(usersService.findOne).toBeCalledWith('tes123');
 
       expect(user).toEqual(userFoundMock);
     });
 
     it('should return exception if user not found with id', async () => {
-      jest.spyOn(usersService, 'findOneId').mockRejectedValue(new Error());
+      jest.spyOn(usersService, 'findOne').mockRejectedValue(new Error());
 
-      await expect(usersService.findOneId('a')).rejects.toThrowError();
-    });
-
-    it('should find user with email', async () => {
-      const userFoundMock = {
-        id: '1',
-        email: 'tes@gmail.com',
-        is_active: true,
-        user_id: 'tes123',
-        password: 'password',
-        username: 'tes123',
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-
-      jest.spyOn(usersService, 'findOneEmail').mockResolvedValue(userFoundMock);
-
-      const user = await usersService.findOneEmail('tes@gmail.com');
-
-      expect(usersService.findOneEmail);
-      expect(usersService.findOneEmail).toBeCalledWith('tes@gmail.com');
-
-      expect(user).toEqual(userFoundMock);
-    });
-
-    it('should return exception if user not found with email', async () => {
-      jest.spyOn(usersService, 'findOneEmail').mockRejectedValue(new Error());
-
-      await expect(usersService.findOneEmail('a')).rejects.toThrowError();
+      await expect(usersService.findOne('a')).rejects.toThrowError();
     });
 
     it('should update users and return record', async () => {
@@ -240,6 +214,7 @@ describe('UsersService', () => {
     it('should create user and return record', async () => {
       const createUserDto = {
         email: 'tes@gmail.com',
+        phone_number: '08123456789',
         is_active: true,
         password: 'password',
         user_id: 'tes123',
@@ -282,15 +257,18 @@ describe('UsersService', () => {
       expect(users.length).toBe(0);
     });
 
-    it('should return user with id query', async () => {
+    it('should return user by id', async () => {
       const usersFoundMock = {
         email: 'tes@gmail.com',
         is_active: true,
         user_id: 'tes123',
         username: 'tes123',
       };
+      const { id } = await prismaService.users.findFirst({
+        where: { user_id: 'tes123' },
+      });
 
-      const user = await usersService.findOneId('tes123');
+      const user = await usersService.findOne(id);
 
       expect(user.email).toBe(usersFoundMock.email);
       expect(user.user_id).toBe(usersFoundMock.user_id);
@@ -298,32 +276,8 @@ describe('UsersService', () => {
       expect(user.username).toBe(usersFoundMock.username);
     });
 
-    it('should return undefined if user not found id query', async () => {
-      const user = await usersService.findOneId('tes1234');
-
-      expect(user).toBeNull();
-    });
-
-    it('should return user with email query', async () => {
-      const usersFoundMock = {
-        email: 'tes@gmail.com',
-        is_active: true,
-        user_id: 'tes123',
-        username: 'tes123',
-      };
-
-      const user = await usersService.findOneEmail('tes@gmail.com');
-
-      expect(user.email).toBe(usersFoundMock.email);
-      expect(user.user_id).toBe(usersFoundMock.user_id);
-      expect(user.is_active).toBe(usersFoundMock.is_active);
-      expect(user.username).toBe(usersFoundMock.username);
-    });
-
-    it('should return undefined if user not found email query', async () => {
-      const user = await usersService.findOneEmail('not_found@gmail.com');
-
-      expect(user).toBeNull();
+    it('should return exception if user not found', async () => {
+      await expect(usersService.findOne('not_exist')).rejects.toThrowError();
     });
 
     it('should update user and return record', async () => {
@@ -335,7 +289,11 @@ describe('UsersService', () => {
         username: 'ganti123',
       };
 
-      const user = await usersService.findOneId('tes123');
+      const { id } = await prismaService.users.findFirst({
+        where: { user_id: 'tes123' },
+      });
+
+      const user = await usersService.findOne(id);
 
       const updatedUser = await usersService.update(user.id, updateUserDto);
 
@@ -360,13 +318,15 @@ describe('UsersService', () => {
     });
 
     it('should remove user', async () => {
-      const user = await usersService.findOneId('ganti123');
+      const user = await prismaService.users.findFirst({
+        where: { username: 'ganti123' },
+      });
 
       await expect(usersService.remove(user.id)).resolves.toBeUndefined();
 
-      const findUser = await usersService.findOneId('ganti123');
+      const findUser = await usersService.find(user.user_id);
 
-      expect(findUser).toBeNull();
+      expect(findUser.length).toBe(0);
     });
 
     it('should return exception when remove users that not exist', async () => {

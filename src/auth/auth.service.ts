@@ -4,25 +4,28 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { isEmail } from 'class-validator';
 import { JwtService } from '@nestjs/jwt';
 
-import { UsersService } from 'src/users/users.service';
 import { UserType } from 'src/users/interface/user.interface';
 import { SignUpDto } from './dto/sign-up.dto';
 import { LoginDto } from './dto/login.dto';
+import { PrismaService } from 'src/common/prisma/prisma.service';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
+    private prismaService: PrismaService,
     private jwtService: JwtService,
   ) {}
 
-  async validateUser({ user_idOrEmail, password }: LoginDto) {
-    const user = isEmail(user_idOrEmail)
-      ? await this.usersService.findOneEmail(user_idOrEmail)
-      : await this.usersService.findOneId(user_idOrEmail);
+  async validateUser({ user_idOrEmail, password }: LoginDto): Promise<string> {
+    const user = await this.prismaService.users.findFirst({
+      where: {
+        OR: [{ user_id: user_idOrEmail }, { email: user_idOrEmail }],
+      },
+    });
 
     if (!user)
       throw new NotFoundException({
@@ -42,17 +45,15 @@ export class AuthService {
         },
       });
     }
-    return { access_token: await this.generateToken(user) };
+    return await this.generateToken(user);
   }
 
-  private async generateToken(user: UserType) {
+  private async generateToken(user: UserType): Promise<string> {
     const payload = {
       id: user.id,
       user_id: user.user_id,
       email: user.email,
       username: user.username,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
     };
 
     return await this.jwtService.signAsync(payload, {
@@ -60,11 +61,11 @@ export class AuthService {
     });
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto): Promise<string> {
     return await this.validateUser(loginDto);
   }
 
-  async signUp(signUpDto: SignUpDto) {
+  async signUp(signUpDto: SignUpDto): Promise<string> {
     const createdUser = await this.usersService.create(signUpDto);
 
     return await this.generateToken(createdUser);

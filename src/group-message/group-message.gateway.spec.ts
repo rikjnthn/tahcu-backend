@@ -256,6 +256,7 @@ describe('GroupMessageGateway', () => {
         await tx.group.create({
           data: {
             name: 'group uhui',
+            admin_id: anto.id,
             created_by_id: anto.id,
             description: 'group baru euy',
             group_membership: {

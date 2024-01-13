@@ -23,7 +23,7 @@ export class AuthController {
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
-  ) {
+  ): Promise<void> {
     const token = await this.authService.login(loginDto);
 
     response.cookie('tahcu_auth', JSON.stringify(token), {
@@ -38,7 +38,7 @@ export class AuthController {
   async signUp(
     @Body() signUpDto: SignUpDto,
     @Res({ passthrough: true }) response: Response,
-  ) {
+  ): Promise<void> {
     const token = await this.authService.signUp(signUpDto);
 
     response.cookie('tahcu_auth', JSON.stringify(token), {

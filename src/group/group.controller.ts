@@ -7,6 +7,8 @@ import {
   Delete,
   UseGuards,
   UseFilters,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 
 import { GroupService } from './group.service';
@@ -17,6 +19,11 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { PrismaKnownRequestErrorFilter } from 'src/common/filter/prisma-known-request-error.filter';
 import { AddMemberDto } from './dto/add-member.dto';
 import { DeleteMemberDto } from './dto/delete-member.dto';
+import {
+  GroupMembershipType,
+  GroupType,
+  MemberType,
+} from './interface/group.interface';
 
 @Controller('group')
 @UseGuards(AuthGuard)
@@ -25,15 +32,25 @@ export class GroupController {
   constructor(private readonly groupService: GroupService) {}
 
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() createGroupDto: CreateGroupDto,
     @User('id') userId: string,
-  ) {
+  ): Promise<
+    GroupType & {
+      group_membership: GroupMembershipType[];
+    }
+  > {
     return await this.groupService.create(createGroupDto, userId);
   }
 
   @Get()
-  async findAll(@User('id') userId: string) {
+  @HttpCode(HttpStatus.FOUND)
+  async findAll(@User('id') userId: string): Promise<
+    (GroupType & {
+      group_membership: GroupMembershipType[];
+    })[]
+  > {
     return await this.groupService.findAll(userId);
   }
 
@@ -42,7 +59,7 @@ export class GroupController {
     @Body('id') id: string,
     @Body('data') updateGroupDto: UpdateGroupDto,
     @User('id') userId: string,
-  ) {
+  ): Promise<GroupType> {
     return await this.groupService.updateGroup(id, updateGroupDto, userId);
   }
 
@@ -50,7 +67,7 @@ export class GroupController {
   async addMembers(
     @Body() addMemberDto: AddMemberDto,
     @User('id') userId: string,
-  ) {
+  ): Promise<MemberType[]> {
     return await this.groupService.addMembers(addMemberDto, userId);
   }
 
@@ -58,17 +75,23 @@ export class GroupController {
   async deleteMembers(
     @Body() deleteMemberDto: DeleteMemberDto,
     @User('id') userId: string,
-  ) {
+  ): Promise<MemberType[]> {
     return await this.groupService.deleteMembers(deleteMemberDto, userId);
   }
 
   @Delete('exit-group')
-  async exitGroup(@Body('id') groupId: string, @User('id') userId: string) {
+  async exitGroup(
+    @Body('id') groupId: string,
+    @User('id') userId: string,
+  ): Promise<void> {
     await this.groupService.exitGroup(groupId, userId);
   }
 
   @Delete()
-  async remove(@Body('id') groupId: string, @User('id') userId: string) {
-    return await this.groupService.remove(groupId, userId);
+  async remove(
+    @Body('id') groupId: string,
+    @User('id') userId: string,
+  ): Promise<void> {
+    await this.groupService.remove(groupId, userId);
   }
 }

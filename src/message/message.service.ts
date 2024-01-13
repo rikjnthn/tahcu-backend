@@ -5,12 +5,13 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { FindMessageDto } from './dto/find-messages.dto';
+import { MessageType } from './interface/message.interface';
 
 @Injectable()
 export class MessageService {
   constructor(private prismaService: PrismaService) {}
 
-  async create(createMessageDto: CreateMessageDto) {
+  async create(createMessageDto: CreateMessageDto): Promise<MessageType> {
     if (createMessageDto.receiver_id === createMessageDto.sender_id) {
       throw new WsException({
         status: 'error',
@@ -24,7 +25,11 @@ export class MessageService {
     return createdMessage;
   }
 
-  async findAll({ sender_id, receiver_id, lower_limit }: FindMessageDto) {
+  async findAll({
+    sender_id,
+    receiver_id,
+    lower_limit,
+  }: FindMessageDto): Promise<MessageType[]> {
     return await this.prismaService.message.findMany({
       where: {
         OR: [
@@ -36,7 +41,10 @@ export class MessageService {
     });
   }
 
-  async update(id: string, updateMessageDto: UpdateMessageDto) {
+  async update(
+    id: string,
+    updateMessageDto: UpdateMessageDto,
+  ): Promise<MessageType> {
     if (updateMessageDto.receiver_id === updateMessageDto.sender_id) {
       throw new WsException({
         status: 'error',
@@ -56,7 +64,7 @@ export class MessageService {
     return updatedMessage;
   }
 
-  async remove(ids: string[]) {
+  async remove(ids: string[]): Promise<void> {
     await this.prismaService.$transaction(
       ids.map((id) => {
         return this.prismaService.message.delete({

@@ -1,39 +1,53 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { DeleteMemberDto } from './dto/delete-member.dto';
+import {
+  GroupMembershipType,
+  GroupType,
+  MemberType,
+} from './interface/group.interface';
 
 @Injectable()
 export class GroupService {
   constructor(private prismaService: PrismaService) {}
 
-  async create(createGroupDto: CreateGroupDto, userId: string) {
+  async create(
+    createGroupDto: CreateGroupDto,
+    userId: string,
+  ): Promise<GroupType & { group_membership: GroupMembershipType[] }> {
     const { description, name, members } = createGroupDto;
 
-    const [createdGroup] = await this.prismaService.$transaction([
-      this.prismaService.group.create({
-        data: {
-          description,
-          name,
-          admin_id: userId,
-          created_by_id: userId,
-          group_membership: {
-            createMany: {
-              data: members.map((member) => ({ user_id: member })),
+    const [createdGroup] = await this.prismaService.$transaction(
+      [
+        this.prismaService.group.create({
+          data: {
+            description,
+            name,
+            admin_id: userId,
+            created_by_id: userId,
+            group_membership: {
+              createMany: {
+                data: members.map((member) => ({ user_id: member })),
+              },
             },
           },
-        },
-        include: { group_membership: true },
-      }),
-    ]);
+          include: { group_membership: true },
+        }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     return createdGroup;
   }
 
-  async findAll(user_id: string) {
+  async findAll(
+    user_id: string,
+  ): Promise<Array<GroupType & { group_membership: GroupMembershipType[] }>> {
     const groups = await this.prismaService.group.findMany({
       where: {
         group_membership: {
@@ -44,6 +58,7 @@ export class GroupService {
       },
       include: { group_membership: true },
     });
+
     return groups;
   }
 
@@ -51,7 +66,7 @@ export class GroupService {
     groupId: string,
     updateGroupDto: UpdateGroupDto,
     user_id: string,
-  ) {
+  ): Promise<GroupType> {
     const { description, name, new_admin } = updateGroupDto;
 
     const { admin_id } = await this.prismaService.group.findFirst({
@@ -65,21 +80,27 @@ export class GroupService {
         'You were not permitted to delete this group',
       );
 
-    const [updatedGroup] = await this.prismaService.$transaction([
-      this.prismaService.group.update({
-        where: { id: groupId },
-        data: {
-          description,
-          name,
-          admin_id: new_admin,
-        },
-      }),
-    ]);
+    const [updatedGroup] = await this.prismaService.$transaction(
+      [
+        this.prismaService.group.update({
+          where: { id: groupId },
+          data: {
+            description,
+            name,
+            admin_id: new_admin,
+          },
+        }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     return updatedGroup;
   }
 
-  async addMembers(addMemberDto: AddMemberDto, user_id: string) {
+  async addMembers(
+    addMemberDto: AddMemberDto,
+    user_id: string,
+  ): Promise<MemberType[]> {
     const { group_id, members } = addMemberDto;
 
     const { admin_id } = await this.prismaService.group.findFirst({
@@ -100,12 +121,16 @@ export class GroupService {
           },
         }),
       ),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
 
     return addedMember;
   }
 
-  async deleteMembers(deleteMemberDto: DeleteMemberDto, user_id: string) {
+  async deleteMembers(
+    deleteMemberDto: DeleteMemberDto,
+    user_id: string,
+  ): Promise<MemberType[]> {
     const { group_id, members } = deleteMemberDto;
 
     const { admin_id } = await this.prismaService.group.findFirst({
@@ -128,6 +153,7 @@ export class GroupService {
           },
         }),
       ),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
 
     const updatedMember = await this.prismaService.groupMembership.findMany({
@@ -139,7 +165,7 @@ export class GroupService {
     return updatedMember;
   }
 
-  async exitGroup(group_id: string, user_id: string) {
+  async exitGroup(group_id: string, user_id: string): Promise<void> {
     await this.prismaService.groupMembership.delete({
       where: {
         user_id_group_id: {
@@ -150,7 +176,7 @@ export class GroupService {
     });
   }
 
-  async remove(groupId: string, user_id: string) {
+  async remove(groupId: string, user_id: string): Promise<void> {
     const { admin_id } = await this.prismaService.group.findFirst({
       where: {
         id: groupId,
@@ -162,10 +188,13 @@ export class GroupService {
         'You were not permitted to delete this group',
       );
 
-    await this.prismaService.$transaction([
-      this.prismaService.group.deleteMany({
-        where: { id: groupId },
-      }),
-    ]);
+    await this.prismaService.$transaction(
+      [
+        this.prismaService.group.deleteMany({
+          where: { id: groupId },
+        }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 }

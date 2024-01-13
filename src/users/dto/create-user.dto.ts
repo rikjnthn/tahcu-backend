@@ -30,6 +30,10 @@ export class CreateUserDto {
   @IsNotEmpty()
   email: string;
 
+  @IsString()
+  @Matches(/[0-9]/g)
+  phone_number: string;
+
   @IsBoolean()
   @IsNotEmpty()
   is_active: boolean;

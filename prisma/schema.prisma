@@ -16,6 +16,7 @@ model Users {
   username   String
   password   String
   email      String
+  phone_number String?
   is_active  Boolean
   created_at DateTime @default(now()) @db.Timestamptz()
   updated_at DateTime @default(now()) @db.Timestamptz()
@@ -28,7 +29,7 @@ model Users {
   group            Group[]           @relation("group")
   admin            Group[]           @relation("admin")
 
-  @@unique([user_id, email])
+  @@unique([user_id, email, phone_number])
 }
 
 model Group {

@@ -55,6 +55,33 @@ describe('UsersController', () => {
       expect(users.length).toBe(0);
     });
 
+    it('should find one user by id', async () => {
+      const usersFoundMock = {
+        id: '1',
+        user_id: 'tes123',
+        email: 'tes@gmail.com',
+        is_active: true,
+        username: 'test',
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      jest.spyOn(usersService, 'findOne').mockResolvedValue(usersFoundMock);
+
+      const users = await usersController.findOne('1');
+
+      expect(usersService.findOne).toBeCalled();
+      expect(usersService.findOne).toBeCalledWith('1');
+
+      expect(users).toEqual(usersFoundMock);
+    });
+
+    it('should return exception if user not found', async () => {
+      jest.spyOn(usersService, 'findOne').mockRejectedValue(new Error());
+
+      await expect(usersController.findOne('y')).rejects.toThrowError();
+    });
+
     it('should update users and return record', async () => {
       const updateUserDtoMock = {
         user_id: 'akun_baru',
@@ -156,6 +183,7 @@ describe('UsersController', () => {
     beforeAll(async () => {
       await usersService.create({
         email: 'tes@gmail.com',
+        phone_number: '08123456789',
         user_id: 'tes123',
         is_active: true,
         username: 'test',
@@ -193,6 +221,30 @@ describe('UsersController', () => {
       expect(Array.isArray(users)).toBeTruthy();
 
       expect(users.length).toBe(0);
+    });
+
+    it('should find one user by id', async () => {
+      const usersFoundMock = {
+        email: 'tes@gmail.com',
+        user_id: 'tes123',
+        is_active: true,
+        username: 'test',
+      };
+
+      const { id } = await prismaService.users.findFirst({
+        where: { username: 'test' },
+      });
+
+      const user = await usersController.findOne(id);
+
+      expect(user.email).toBe(usersFoundMock.email);
+      expect(user.user_id).toBe(usersFoundMock.user_id);
+      expect(user.is_active).toBe(usersFoundMock.is_active);
+      expect(user.username).toBe(usersFoundMock.username);
+    });
+
+    it('should return exception if user not found', async () => {
+      await expect(usersService.findOne('tess')).rejects.toThrowError();
     });
 
     it('should update users and return record', async () => {
