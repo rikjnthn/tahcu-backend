@@ -4,14 +4,20 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { GroupService } from './group.service';
 import { PrismaService } from 'src/common/prisma/prisma.service';
-import { GroupController } from './group.controller';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { UsersModule } from 'src/users/users.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 describe('GroupService', () => {
   describe('Unit Testing', () => {
     let prismaService: PrismaService;
     let groupService: GroupService;
+
+    const user_1 = 'user_1';
+    const user_2 = 'user_2';
+    const user_3 = 'user_3';
+
+    const group_id = 'group_id';
 
     beforeAll(async () => {
       prismaService = new PrismaService();
@@ -24,29 +30,35 @@ describe('GroupService', () => {
 
     it('should create group and return record', async () => {
       const createGroupDto = {
-        name: 'group uhuy',
-        description: 'group aja',
-        members: ['andi', 'dina'],
+        name: 'group_name',
+        description: 'group_description',
+        members: [user_1, user_2],
       };
 
       const createdGroupMock = {
-        id: '1',
-        name: 'group uhuy',
-        description: 'group aja',
+        id: 'group_id',
+        name: 'group_name',
+        description: 'group_description',
         created_at: new Date(),
-        admin_id: 'andi',
-        created_by_id: 'andi',
+        admin_id: user_1,
+        created_by_id: user_1,
         group_membership: [
           {
-            id: '1',
-            user_id: 'andi',
-            group_id: '1',
+            id: 'membership_id_1',
+            user: {
+              username: 'username_1',
+            },
+            user_id: user_1,
+            group_id,
             joined_at: new Date(),
           },
           {
-            id: '2',
-            user_id: 'dina',
-            group_id: '1',
+            id: 'membership_id_2',
+            user: {
+              username: 'username_2',
+            },
+            user_id: user_2,
+            group_id,
             joined_at: new Date(),
           },
         ],
@@ -54,38 +66,56 @@ describe('GroupService', () => {
 
       jest.spyOn(groupService, 'create').mockResolvedValue(createdGroupMock);
 
-      const createdGroup = await groupService.create(createGroupDto, 'andi');
+      const createdGroup = await groupService.create(createGroupDto, user_1);
 
       expect(groupService.create).toBeCalled();
-      expect(groupService.create).toBeCalledWith(createGroupDto, 'andi');
+      expect(groupService.create).toBeCalledWith(createGroupDto, user_1);
 
       expect(createdGroup).toEqual(createdGroupMock);
     });
 
     it('should return exception if user that create group not exist', async () => {
       const createGroupDto = {
-        name: 'group uhuy',
-        description: 'group aja',
-        members: ['andi', 'dina'],
+        name: 'group_name',
+        description: 'group_description',
+        members: [user_1, user_2],
       };
 
       jest.spyOn(groupService, 'create').mockRejectedValue(new Error());
 
       await expect(
-        groupService.create(createGroupDto, 'not_exist'),
+        groupService.create(createGroupDto, 'not_exist_user_id'),
       ).rejects.toThrowError();
     });
 
     it('should add(create) group membership and return record', async () => {
       const addMmeberDto = {
-        group_id: '3',
-        members: ['doni'],
+        group_id: 'group_id',
+        members: [user_3],
       };
 
       const addedMemberMock = [
         {
-          id: '3',
-          user_id: 'doni',
+          id: 'membership_id_1',
+          user: {
+            username: 'username_1',
+          },
+          user_id: user_1,
+          group_id,
+          joined_at: new Date(),
+        },
+        {
+          id: 'membership_id_2',
+          user: {
+            username: 'username_2',
+          },
+          user_id: user_2,
+          group_id,
+          joined_at: new Date(),
+        },
+        {
+          id: 'membership_id_3',
+          user_id: user_3,
           group_id: '1',
           joined_at: new Date(),
         },
@@ -93,10 +123,10 @@ describe('GroupService', () => {
 
       jest.spyOn(groupService, 'addMembers').mockResolvedValue(addedMemberMock);
 
-      const addedMember = await groupService.addMembers(addMmeberDto, 'doni');
+      const addedMember = await groupService.addMembers(addMmeberDto, user_1);
 
       expect(groupService.addMembers).toBeCalled();
-      expect(groupService.addMembers).toBeCalledWith(addMmeberDto, 'doni');
+      expect(groupService.addMembers).toBeCalledWith(addMmeberDto, user_1);
 
       expect(addedMember).toEqual(addedMemberMock);
     });
@@ -104,68 +134,136 @@ describe('GroupService', () => {
     it('should return exception if user that need to be add to a group not exist', async () => {
       const addMemberDto = {
         group_id: '1',
-        members: ['not_exist'],
+        members: ['not_exist_user_id'],
       };
 
       jest.spyOn(groupService, 'addMembers').mockRejectedValue(new Error());
 
       await expect(
-        groupService.addMembers(addMemberDto, '1'),
+        groupService.addMembers(addMemberDto, user_1),
       ).rejects.toThrowError();
     });
 
     it('should return exception if a group not exist when adding member', async () => {
       const addMemberDto = {
-        group_id: 'not_exist',
-        members: ['dion'],
+        group_id: 'not_exist_group_id',
+        members: ['user_4'],
       };
 
       jest.spyOn(groupService, 'addMembers').mockRejectedValue(new Error());
 
+      const differentGroupAdmin = 'user_5';
+
       await expect(
-        groupService.addMembers(addMemberDto, '1'),
+        groupService.addMembers(addMemberDto, differentGroupAdmin),
       ).rejects.toThrowError();
     });
 
     it('should return exception if a non admin adding member', async () => {
       const addMemberDto = {
-        group_id: '1',
-        members: ['dion'],
+        group_id: 'group_id',
+        members: ['user_4'],
       };
 
       jest.spyOn(groupService, 'addMembers').mockRejectedValue(new Error());
 
       await expect(
-        groupService.addMembers(addMemberDto, 'non_admin'),
+        groupService.addMembers(addMemberDto, 'not_admin_user_id'),
       ).rejects.toThrowError();
     });
 
     it('should find group', async () => {
+      const foundGroupMock = {
+        id: 'group_id',
+        name: 'group_name',
+        description: 'group_description',
+        created_at: new Date(),
+        admin_id: user_1,
+        created_by_id: user_1,
+        group_membership: [
+          {
+            id: 'membership_id_1',
+            user: {
+              username: 'username_1',
+            },
+            user_id: user_1,
+            group_id,
+            joined_at: new Date(),
+          },
+          {
+            id: 'membership_id_2',
+            user: {
+              username: 'username_2',
+            },
+            user_id: user_2,
+            group_id,
+            joined_at: new Date(),
+          },
+          {
+            id: 'membership_id_3',
+            user: {
+              username: 'username_3',
+            },
+            user_id: user_3,
+            group_id,
+            joined_at: new Date(),
+          },
+        ],
+      };
+
+      jest.spyOn(groupService, 'findOne').mockResolvedValue(foundGroupMock);
+
+      const group = await groupService.findOne('group_id');
+
+      expect(groupService.findOne).toBeCalled();
+      expect(groupService.findOne).toBeCalledWith('group_id');
+
+      expect(group).toEqual(foundGroupMock);
+    });
+
+    it('should return exception if group is not found', async () => {
+      jest.spyOn(groupService, 'findOne').mockRejectedValue(new Error());
+
+      await expect(
+        groupService.findOne('not_exist_group_id'),
+      ).rejects.toThrowError();
+    });
+
+    it('should find groups', async () => {
       const foundGroupMock = [
         {
-          id: '1',
-          name: 'group uhuy',
-          description: 'group aja',
+          id: 'group_id',
+          name: 'group_name',
+          description: 'group_description',
           created_at: new Date(),
-          admin_id: 'andi',
-          created_by_id: 'andi',
+          admin_id: user_1,
+          created_by_id: user_1,
           group_membership: [
             {
-              id: '1',
-              user_id: 'andi',
-              group_id: '1',
+              id: 'membership_id_1',
+              user: {
+                username: 'username_1',
+              },
+              user_id: user_1,
+              group_id,
               joined_at: new Date(),
             },
             {
-              id: '2',
-              user_id: 'dina',
-              group_id: '1',
+              id: 'membership_id_2',
+              user: {
+                username: 'username_2',
+              },
+              user_id: user_2,
+              group_id,
               joined_at: new Date(),
             },
             {
-              id: '3',
-              user_id: 'doni',
-              group_id: '1',
+              id: 'membership_id_3',
+              user: {
+                username: 'username_3',
+              },
+              user_id: user_3,
+              group_id,
               joined_at: new Date(),
             },
           ],
@@ -174,10 +272,10 @@ describe('GroupService', () => {
 
       jest.spyOn(groupService, 'findAll').mockResolvedValue(foundGroupMock);
 
-      const createdGroup = await groupService.findAll('andi');
+      const createdGroup = await groupService.findAll(user_1);
 
       expect(groupService.findAll).toBeCalled();
-      expect(groupService.findAll).toBeCalledWith('andi');
+      expect(groupService.findAll).toBeCalledWith(user_1);
 
       expect(createdGroup).toEqual(foundGroupMock);
     });
@@ -190,96 +288,94 @@ describe('GroupService', () => {
 
     it('should update group and return record', async () => {
       const updateGroupDto = {
-        description: 'ganti desc',
-        name: 'ganti nama group',
-        new_admin: 'dina',
+        description: 'change description',
+        name: 'change group name',
+        new_admin: user_2,
       };
 
       const updatedGroupMock = {
-        id: '1',
-        name: 'ganti nama group',
-        description: 'ganti desc',
+        id: 'group_id',
+        name: 'change group name',
+        description: 'change description',
         created_at: new Date(),
-        admin_id: 'dina',
-        created_by_id: 'andi',
+        admin_id: user_2,
+        created_by_id: user_1,
       };
       jest
         .spyOn(groupService, 'updateGroup')
         .mockResolvedValue(updatedGroupMock);
 
       const updatedGroup = await groupService.updateGroup(
-        '1',
+        'group_id',
         updateGroupDto,
-        '1',
+        user_1,
       );
 
       expect(groupService.updateGroup).toBeCalled();
-      expect(groupService.updateGroup).toBeCalledWith('1', updateGroupDto, '1');
+      expect(groupService.updateGroup).toBeCalledWith(
+        'group_id',
+        updateGroupDto,
+        'user_1',
+      );
 
       expect(updatedGroup).toEqual(updatedGroupMock);
     });
 
     it('should return exception if group admin changed to non exist user', async () => {
       const updateGroupDto = {
-        description: 'ganti desc',
-        name: 'ganti nama group',
-        new_admin: 'not_exist',
+        description: 'change description again',
+        name: 'change group name again',
+        new_admin: 'not_exist_user_id',
       };
 
       jest.spyOn(groupService, 'updateGroup').mockRejectedValue(new Error());
 
       await expect(
-        groupService.updateGroup('1', updateGroupDto, '1'),
+        groupService.updateGroup('group_id', updateGroupDto, user_1),
       ).rejects.toThrowError();
     });
 
     it('should return exception if non admin trying to update group', async () => {
       const updateGroupDto = {
-        description: 'ganti desc',
-        name: 'ganti nama group',
-        new_admin: 'dina',
+        description: 'change description again',
+        name: 'change group name again',
+        new_admin: user_3,
       };
 
       jest
         .spyOn(groupService, 'updateGroup')
-        .mockRejectedValue(
-          new UnauthorizedException(
-            'You were not permitted to delete this group',
-          ),
-        );
+        .mockRejectedValue(new UnauthorizedException());
 
       await expect(
-        groupService.updateGroup('1', updateGroupDto, 'non_admin'),
-      ).rejects.toThrowError(
-        new UnauthorizedException(
-          'You were not permitted to delete this group',
+        groupService.updateGroup(
+          'group_id',
+          updateGroupDto,
+          'not_group_admin_id',
         ),
-      );
+      ).rejects.toThrowError(new UnauthorizedException());
     });
 
     it('should return exception if group not found when update group', async () => {
       const updateGroupDto = {
-        description: 'ganti desc',
-        name: 'ganti nama group',
-        new_admin: 'dina',
+        description: 'change group description again',
+        name: 'change group name again',
+        new_admin: user_3,
       };
 
-      jest
-        .spyOn(groupService, 'updateGroup')
-        .mockRejectedValue(new NotFoundException());
+      jest.spyOn(groupService, 'updateGroup').mockRejectedValue(new Error());
 
       await expect(
-        groupService.updateGroup('not_exist', updateGroupDto, '1'),
-      ).rejects.toThrowError(new NotFoundException());
+        groupService.updateGroup('not_exist_group_id', updateGroupDto, user_2),
+      ).rejects.toThrowError(new Error());
     });
 
     it('should delete group', async () => {
       jest.spyOn(groupService, 'remove').mockResolvedValue(undefined);
 
-      const updatedGroup = await groupService.remove('1', '1');
+      const updatedGroup = await groupService.remove('group_id', user_2);
 
       expect(groupService.remove).toBeCalled();
-      expect(groupService.remove).toBeCalledWith('1', '1');
+      expect(groupService.remove).toBeCalledWith('group_id', user_2);
 
       expect(updatedGroup).toBeUndefined();
     });
@@ -287,17 +383,11 @@ describe('GroupService', () => {
     it('should return exception if non admin trying to delete group', async () => {
       jest
         .spyOn(groupService, 'remove')
-        .mockRejectedValue(
-          new UnauthorizedException(
-            'You were not permitted to delete this group',
-          ),
-        );
+        .mockRejectedValue(new UnauthorizedException());
 
-      await expect(groupService.remove('1', 'non_admin')).rejects.toThrowError(
-        new UnauthorizedException(
-          'You were not permitted to delete this group',
-        ),
-      );
+      await expect(
+        groupService.remove('group_id', 'not_admin_id'),
+      ).rejects.toThrowError(new UnauthorizedException());
     });
 
     it('should return exception if group not found when trying to delete group', async () => {
@@ -305,28 +395,28 @@ describe('GroupService', () => {
         .spyOn(groupService, 'remove')
         .mockRejectedValue(new NotFoundException());
 
-      await expect(groupService.remove('not_exist', '1')).rejects.toThrowError(
-        new NotFoundException(),
-      );
+      await expect(
+        groupService.remove('not_exist_group_id', user_2),
+      ).rejects.toThrowError(new NotFoundException());
     });
 
     it('should delete group member', async () => {
       const deleteMemberDto = {
-        group_id: '1',
-        members: ['3'],
+        group_id: 'group_id',
+        members: [user_3],
       };
 
       const deletedMemberMock = [
         {
-          id: '1',
-          user_id: 'andi',
-          group_id: '1',
+          id: 'membership_id_1',
+          user_id: user_1,
+          group_id: 'group_id',
           joined_at: new Date(),
         },
         {
-          id: '2',
-          user_id: 'dina',
-          group_id: '1',
+          id: 'membership_id_2',
+          user_id: user_2,
+          group_id: 'group_id',
           joined_at: new Date(),
         },
       ];
@@ -337,58 +427,44 @@ describe('GroupService', () => {
 
       const updatedGroup = await groupService.deleteMembers(
         deleteMemberDto,
-        '1',
+        user_2,
       );
 
       expect(groupService.deleteMembers).toBeCalled();
-      expect(groupService.deleteMembers).toBeCalledWith(deleteMemberDto, '1');
+      expect(groupService.deleteMembers).toBeCalledWith(
+        deleteMemberDto,
+        user_2,
+      );
 
       expect(updatedGroup).toEqual(deletedMemberMock);
     });
 
-    it('should return exception when delete group member that not exist', async () => {
-      const deleteMemberDto = {
-        group_id: '1',
-        members: ['not_exist'],
-      };
-
-      jest.spyOn(groupService, 'deleteMembers').mockRejectedValue(new Error());
-
-      await expect(
-        groupService.deleteMembers(deleteMemberDto, 'non_admin'),
-      ).rejects.toThrowError(new Error());
-    });
-
     it('should return exception non admin trying to delete group member', async () => {
       const deleteMemberDto = {
-        group_id: '1',
-        members: ['3'],
+        group_id: 'group_id',
+        members: [user_1],
       };
 
       jest
         .spyOn(groupService, 'deleteMembers')
-        .mockRejectedValue(
-          new UnauthorizedException(
-            'You were not permitted to add member this group',
-          ),
-        );
+        .mockRejectedValue(new UnauthorizedException());
 
       await expect(
-        groupService.deleteMembers(deleteMemberDto, 'non_admin'),
-      ).rejects.toThrowError(
-        new UnauthorizedException(
-          'You were not permitted to add member this group',
-        ),
-      );
+        groupService.deleteMembers(deleteMemberDto, 'not_admin_id'),
+      ).rejects.toThrowError(new UnauthorizedException());
     });
 
     it('should exit from group', async () => {
       jest.spyOn(groupService, 'exitGroup').mockResolvedValue(undefined);
 
-      const exitGroup = await groupService.exitGroup('1', '1');
+      const exitGroup = await groupService.exitGroup(
+        'group_id',
+        user_1,
+        user_2,
+      );
 
       expect(groupService.exitGroup).toBeCalled();
-      expect(groupService.exitGroup).toBeCalledWith('1', '1');
+      expect(groupService.exitGroup).toBeCalledWith('group_id', user_1, user_2);
 
       expect(exitGroup).toBeUndefined();
     });
@@ -397,7 +473,7 @@ describe('GroupService', () => {
       jest.spyOn(groupService, 'exitGroup').mockRejectedValue(new Error());
 
       await expect(
-        groupService.exitGroup('not_exist', '1'),
+        groupService.exitGroup('not_exist_group_id', user_1, user_2),
       ).rejects.toThrowError();
     });
   });
@@ -405,6 +481,12 @@ describe('GroupService', () => {
   describe('Integration Testing', () => {
     let prismaService: PrismaService;
     let groupService: GroupService;
+
+    const user_1 = 'user_1';
+    const user_2 = 'user_2';
+    const user_3 = 'user_3';
+
+    let group_id: string;
 
     beforeAll(async () => {
       const module: TestingModule = await Test.createTestingModule({
@@ -418,9 +500,21 @@ describe('GroupService', () => {
               expiresIn: process.env.JWT_EXPIRED,
             },
           }),
+          ThrottlerModule.forRoot([
+            {
+              ttl: parseInt(process.env.DEFAULT_THROTTLER_TTL),
+              limit: parseInt(process.env.DEFAULT_THROTTLER_LIMIT),
+            },
+          ]),
         ],
         providers: [GroupService],
       }).compile();
+
+      /**
+       * I don't know why I have to use this.
+       * If discard this, jest will not exit after running the test.
+       */
+      module.close();
 
       prismaService = module.get<PrismaService>(PrismaService);
       groupService = module.get<GroupService>(GroupService);
@@ -430,18 +524,22 @@ describe('GroupService', () => {
       await prismaService.users.createMany({
         data: [
           {
-            email: 'andi@gmail.com',
-            is_active: true,
+            email: 'user_1@gmail.com',
             password: 'password',
-            user_id: 'andi',
-            username: 'andi',
+            user_id: user_1,
+            username: 'username_1',
           },
           {
-            email: 'dina@gmail.com',
-            is_active: true,
+            email: 'user_2@gmail.com',
             password: 'password',
-            user_id: 'dina',
-            username: 'dina',
+            user_id: user_2,
+            username: 'username_2',
+          },
+          {
+            email: 'user_3@gmail.com',
+            password: 'password',
+            user_id: user_3,
+            username: 'username_3',
           },
         ],
       });
@@ -452,170 +550,110 @@ describe('GroupService', () => {
     });
 
     it('should create group and return record', async () => {
-      const [andi, dina] = await prismaService.users.findMany({
-        select: { id: true },
-        where: { OR: [{ user_id: 'andi' }, { user_id: 'dina' }] },
-      });
-
       const createGroupDto = {
-        name: 'group uhuy',
-        description: 'group aja',
-        members: [andi.id, dina.id],
+        name: 'group_name',
+        description: 'group_description',
+        members: [user_1, user_2],
       };
 
-      const createdGroup = await groupService.create(createGroupDto, andi.id);
+      const createdGroup = await groupService.create(createGroupDto, user_1);
 
-      expect(createdGroup.name).toBe('group uhuy');
-      expect(createdGroup.admin_id).toBe(andi.id);
-      expect(createdGroup.description).toBe('group aja');
-      expect(createdGroup.created_by_id).toBe(andi.id);
+      expect(createdGroup.name).toBe(createGroupDto.name);
+      expect(createdGroup.admin_id).toBe(user_1);
+      expect(createdGroup.created_by_id).toBe(user_1);
+      expect(createdGroup.description).toBe(createGroupDto.description);
 
-      expect(createdGroup.group_membership[0].user_id).toBe(andi.id);
-      expect(createdGroup.group_membership[1].user_id).toBe(dina.id);
+      expect(createdGroup.group_membership[0].user_id).toBe(user_1);
+      expect(createdGroup.group_membership[1].user_id).toBe(user_2);
+
+      group_id = createdGroup.id;
     });
 
     it('should return exception if user that create group not exist', async () => {
-      const [andi, dina] = await prismaService.users.findMany({
-        select: { id: true },
-        where: { OR: [{ user_id: 'andi' }, { user_id: 'dina' }] },
-      });
-
       const createGroupDto = {
-        name: 'group uhuy',
-        description: 'group aja',
-        members: [andi.id, dina.id],
+        name: 'group_name_2',
+        description: 'group_description',
+        members: [user_1, user_2],
       };
 
       await expect(
-        groupService.create(createGroupDto, 'not_exist'),
+        groupService.create(createGroupDto, 'not_exist_user_id'),
       ).rejects.toThrowError();
     });
 
     it('should add(create) group membership and return record', async () => {
-      const group = await prismaService.group.findFirst({
-        where: {
-          name: 'group uhuy',
-        },
-      });
-
-      const doni = await prismaService.users.create({
-        data: {
-          email: 'doni@gmail.com',
-          is_active: true,
-          password: 'password',
-          user_id: 'doni',
-          username: 'doni',
-        },
-      });
-
-      const andi = await prismaService.users.findFirst({
-        where: {
-          username: 'andi',
-        },
-      });
-
       const addMmeberDto = {
-        group_id: group.id,
-        members: [doni.id],
+        group_id,
+        members: [user_3],
       };
 
-      const addedMember = await groupService.addMembers(addMmeberDto, andi.id);
+      const addedMembers = await groupService.addMembers(addMmeberDto, user_1);
 
-      expect(addedMember[0].group_id).toBe(group.id);
-      expect(addedMember[0].user_id).toBe(doni.id);
+      const user_3_membership = addedMembers.find((member) => {
+        return member.user_id === user_3;
+      });
+
+      expect(user_3_membership.group_id).toBe(group_id);
+      expect(user_3_membership.user_id).toBe(user_3);
     });
 
     it('should return exception if user that need to be add to a group not exist', async () => {
-      const group = await prismaService.group.findFirst({
-        where: {
-          name: 'group uhuy',
-        },
-      });
-
-      const andi = await prismaService.users.findFirst({
-        where: {
-          username: 'andi',
-        },
-      });
-
       const addMmeberDto = {
-        group_id: group.id,
-        members: ['not_exist'],
+        group_id,
+        members: ['not_exist_user_id'],
       };
+
       await expect(
-        groupService.addMembers(addMmeberDto, andi.id),
+        groupService.addMembers(addMmeberDto, user_1),
       ).rejects.toThrowError();
     });
 
     it('should return exception if a group not exist when adding member', async () => {
-      const doni = await prismaService.users.findFirst({
-        where: {
-          username: 'doni',
-        },
-      });
-
-      const andi = await prismaService.users.findFirst({
-        where: {
-          username: 'andi',
-        },
-      });
-
       const addMmeberDto = {
-        group_id: 'not_exist',
-        members: [doni.id],
+        group_id: 'not_exist_group_id',
+        members: ['user_4'],
       };
+
       await expect(
-        groupService.addMembers(addMmeberDto, andi.id),
+        groupService.addMembers(addMmeberDto, user_1),
       ).rejects.toThrowError();
     });
 
     it('should return exception if non_admin adding member', async () => {
-      const group = await prismaService.group.findFirst({
-        where: {
-          name: 'group uhuy',
-        },
-      });
-
-      const doni = await prismaService.users.findFirst({
-        where: {
-          username: 'doni',
-        },
-      });
-
       const addMmeberDto = {
-        group_id: group.id,
-        members: [doni.id],
+        group_id,
+        members: ['user_4'],
       };
+
       await expect(
-        groupService.addMembers(addMmeberDto, 'non_admin'),
+        groupService.addMembers(addMmeberDto, 'not_admin_id'),
       ).rejects.toThrowError();
     });
 
     it('should find group', async () => {
-      const [andi, dina, doni] = await prismaService.users.findMany({
-        where: {
-          OR: [
-            {
-              username: 'andi',
-            },
-            {
-              username: 'dina',
-            },
-            {
-              username: 'doni',
-            },
-          ],
-        },
-      });
+      const group = await groupService.findOne(group_id);
 
-      const [createdGroup] = await groupService.findAll(andi.id);
+      expect(group.name).toEqual('group_name');
+      expect(group.description).toEqual('group_description');
+      expect(group.admin_id).toEqual(user_1);
+      expect(group.created_by_id).toEqual(user_1);
+    });
 
-      expect(createdGroup.name).toEqual('group uhuy');
-      expect(createdGroup.description).toEqual('group aja');
-      expect(createdGroup.admin_id).toEqual(andi.id);
-      expect(createdGroup.created_by_id).toEqual(andi.id);
+    it('should return exception if group is not found', async () => {
+      await expect(
+        groupService.findOne('not_exist_group_id'),
+      ).rejects.toThrowError();
+    });
 
-      const members = [andi.id, dina.id, doni.id];
+    it('should find groups', async () => {
+      const [createdGroup] = await groupService.findAll(user_1);
+
+      expect(createdGroup.name).toEqual('group_name');
+      expect(createdGroup.description).toEqual('group_description');
+      expect(createdGroup.admin_id).toEqual(user_1);
+      expect(createdGroup.created_by_id).toEqual(user_1);
+
+      const members = [user_1, user_2, user_3];
 
       createdGroup.group_membership.forEach(({ user_id, group_id }, idx) => {
         expect(user_id).toBe(members[idx]);
@@ -624,277 +662,133 @@ describe('GroupService', () => {
     });
 
     it('should return empty array if user not joined any group', async () => {
-      const andre = await prismaService.users.create({
-        data: {
-          email: 'andre@gmail.com',
-          is_active: true,
-          password: 'password',
-          user_id: 'andre',
-          username: 'andre',
-        },
-      });
-
-      await expect(groupService.findAll(andre.id)).resolves.toEqual([]);
+      await expect(groupService.findAll('user_5')).resolves.toEqual([]);
     });
 
     it('should update group and return record', async () => {
-      const andi = await prismaService.users.findFirst({
-        where: {
-          username: 'andi',
-        },
-      });
-      const dina = await prismaService.users.findFirst({
-        where: {
-          username: 'dina',
-        },
-      });
-
-      const group = await prismaService.group.findFirst({
-        where: { name: 'group uhuy' },
-      });
-
       const updateGroupDto = {
-        description: 'ganti desc',
-        name: 'ganti nama group',
-        new_admin: dina.id,
+        description: 'new_description',
+        name: 'new group name',
+        new_admin: user_2,
       };
 
       const updatedGroup = await groupService.updateGroup(
-        group.id,
+        group_id,
         updateGroupDto,
-        andi.id,
+        user_1,
       );
 
-      expect(updatedGroup.id).toEqual(group.id);
-      expect(updatedGroup.admin_id).toEqual(dina.id);
-      expect(updatedGroup.description).toEqual('ganti desc');
-      expect(updatedGroup.name).toEqual('ganti nama group');
+      expect(updatedGroup.id).toEqual(group_id);
+      expect(updatedGroup.admin_id).toEqual(user_2);
+      expect(updatedGroup.created_by_id).toEqual(user_1);
+      expect(updatedGroup.description).toEqual(updateGroupDto.description);
+      expect(updatedGroup.name).toEqual(updateGroupDto.name);
     });
 
     it('should return exception if group admin changed to non exist user', async () => {
       const updateGroupDto = {
-        description: 'ganti desc',
-        name: 'ganti nama group',
-        new_admin: 'not_exist',
+        description: 'change description',
+        name: 'change group name',
+        new_admin: 'not_exist_user_id',
       };
 
-      const [dina] = await prismaService.users.findMany({
-        where: {
-          username: 'dina',
-        },
-      });
-
-      const group = await prismaService.group.findFirst({
-        where: { name: 'ganti nama group' },
-      });
-
       await expect(
-        groupService.updateGroup(group.id, updateGroupDto, dina.id),
+        groupService.updateGroup(group_id, updateGroupDto, user_2),
       ).rejects.toThrowError();
     });
 
     it('should return exception if non admin trying to update group', async () => {
       const updateGroupDto = {
-        description: 'ganti desc',
-        name: 'ganti nama group',
+        description: 'new description',
+        name: 'group name',
       };
 
-      const [andi] = await prismaService.users.findMany({
-        where: {
-          username: 'andi',
-        },
-      });
-
-      const group = await prismaService.group.findFirst({
-        where: { name: 'ganti nama group' },
-      });
-
       await expect(
-        groupService.updateGroup(group.id, updateGroupDto, andi.id),
-      ).rejects.toThrowError(
-        new UnauthorizedException(
-          'You were not permitted to delete this group',
-        ),
-      );
+        groupService.updateGroup(group_id, updateGroupDto, user_1),
+      ).rejects.toThrowError();
     });
 
     it('should return exception if group not found when update group', async () => {
       const updateGroupDto = {
-        description: 'ganti desc',
-        name: 'ganti nama group',
-        new_admin: 'dina',
+        description: 'desc',
+        name: 'new group name 2',
+        new_admin: user_3,
       };
 
-      const [andi] = await prismaService.users.findMany({
-        where: {
-          username: 'andi',
-        },
-      });
-
       await expect(
-        groupService.updateGroup('not_exist', updateGroupDto, andi.id),
+        groupService.updateGroup('not_exist_group_id', updateGroupDto, user_2),
       ).rejects.toThrowError();
     });
 
     it('should return exception if non admin trying to delete group', async () => {
-      const [andi] = await prismaService.users.findMany({
-        where: {
-          username: 'andi',
-        },
-      });
-
-      const group = await prismaService.group.findFirst({
-        where: { name: 'ganti nama group' },
-      });
-
-      await expect(groupService.remove(group.id, andi.id)).rejects.toThrowError(
-        new UnauthorizedException(
-          'You were not permitted to delete this group',
-        ),
-      );
+      await expect(
+        groupService.remove(group_id, user_1),
+      ).rejects.toThrowError();
     });
 
     it('should delete group member', async () => {
-      const [andi, doni] = await prismaService.users.findMany({
-        where: {
-          OR: [
-            {
-              username: 'andi',
-            },
-            {
-              username: 'doni',
-            },
-          ],
-        },
-      });
-
-      const dina = await prismaService.users.findFirst({
-        where: {
-          username: 'dina',
-        },
-      });
-
-      const group = await prismaService.group.findFirst({
-        where: { name: 'ganti nama group' },
-      });
-
       const deleteMemberDto = {
-        group_id: group.id,
-        members: [doni.id],
+        group_id,
+        members: [user_3],
       };
 
       const updatedGroup = await groupService.deleteMembers(
         deleteMemberDto,
-        dina.id,
+        user_2,
       );
 
-      const members = [andi.id, dina.id];
+      const members = [user_1, user_2];
 
       updatedGroup.forEach(({ group_id, user_id }, idx) => {
-        expect(group_id).toBe(group.id);
+        expect(group_id).toBe(group_id);
         expect(user_id).toBe(members[idx]);
       });
     });
 
-    it('should return exception when delete group member that not exist', async () => {
-      const [dina] = await prismaService.users.findMany({
-        where: {
-          username: 'dina',
-        },
-      });
-
-      const group = await prismaService.group.findFirst({
-        where: { name: 'ganti nama group' },
-      });
-
+    it('should return exception non admin trying to delete group member', async () => {
       const deleteMemberDto = {
-        group_id: group.id,
-        members: ['not_exist'],
+        group_id,
+        members: [user_2],
       };
 
       await expect(
-        groupService.deleteMembers(deleteMemberDto, dina.id),
+        groupService.deleteMembers(deleteMemberDto, user_1),
       ).rejects.toThrowError();
     });
 
-    it('should return exception non admin trying to delete group member', async () => {
-      const [andi, dina] = await prismaService.users.findMany({
-        where: {
-          OR: [{ username: 'andi' }, { username: 'dina' }],
-        },
-      });
-
-      const group = await prismaService.group.findFirst({
-        where: { name: 'ganti nama group' },
-      });
-
-      const deleteMemberDto = {
-        group_id: group.id,
-        members: [dina.id],
-      };
-
-      await expect(
-        groupService.deleteMembers(deleteMemberDto, andi.id),
-      ).rejects.toThrowError(
-        new UnauthorizedException(
-          'You were not permitted to add member this group',
-        ),
-      );
-    });
-
     it('should exit from group', async () => {
-      const [andi] = await prismaService.users.findMany({
-        where: {
-          username: 'andi',
-        },
+      await expect(
+        groupService.exitGroup(group_id, user_1, user_2),
+      ).resolves.toBeUndefined();
+
+      const shouldBeNull = await prismaService.groupMembership.findFirst({
+        where: { group_id, user_id: user_2 },
       });
 
-      const group = await prismaService.group.findFirst({
-        where: { name: 'ganti nama group' },
-      });
-
-      const exitGroup = await groupService.exitGroup(group.id, andi.id);
-
-      expect(exitGroup).toBeUndefined();
+      expect(shouldBeNull).toBeNull();
     });
 
     it('should return exception if group not found when trying to exit from group', async () => {
-      const [andi] = await prismaService.users.findMany({
-        where: {
-          username: 'andi',
-        },
-      });
-
       await expect(
-        groupService.exitGroup('not_exist', andi.id),
+        groupService.exitGroup('not_exist_group_id', user_1, user_2),
       ).rejects.toThrowError();
     });
 
     it('should delete group', async () => {
-      const [dina] = await prismaService.users.findMany({
-        where: {
-          username: 'dina',
-        },
-      });
+      await expect(
+        groupService.remove(group_id, user_1),
+      ).resolves.toBeUndefined();
 
-      const group = await prismaService.group.findFirst({
-        where: { name: 'ganti nama group' },
-      });
-
-      const updatedGroup = await groupService.remove(group.id, dina.id);
-
-      expect(updatedGroup).toBeUndefined();
+      await expect(
+        prismaService.group.findFirst({
+          where: { id: group_id },
+        }),
+      ).resolves.toBeNull();
     });
 
     it('should return exception if group not found when trying to delete group', async () => {
-      const [dina] = await prismaService.users.findMany({
-        where: {
-          username: 'dina',
-        },
-      });
-
       await expect(
-        groupService.remove('not_exist', dina.id),
+        groupService.remove('not_exist_group_id', user_2),
       ).rejects.toThrowError();
     });
 

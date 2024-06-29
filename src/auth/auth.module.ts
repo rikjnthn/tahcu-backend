@@ -5,6 +5,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from 'src/users/users.module';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
+import { EmailModule } from 'src/common/email/email.module';
+import { OtpModule } from 'src/common/otp/otp.module';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { PrismaModule } from 'src/common/prisma/prisma.module';
       },
     }),
     PrismaModule,
+    EmailModule,
+    OtpModule,
   ],
   providers: [AuthService],
   controllers: [AuthController],

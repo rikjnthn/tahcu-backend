@@ -3,53 +3,60 @@ import {
   Get,
   Post,
   Body,
-  Patch,
-  Param,
   Delete,
-  UseFilters,
-  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
+  Param,
 } from '@nestjs/common';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
+
 import { PrivateChatService } from './private-chat.service';
-import { CreatePrivateChatDto } from './dto/create-private-chat.dto';
 import { UpdatePrivateChatDto } from './dto/update-private-chat.dto';
-import { PrismaKnownRequestErrorFilter } from 'src/common/filter/prisma-known-request-error.filter';
-import { Request } from 'express';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { ChatType } from './interface/private-chat.interface';
+import { ContactType } from './interface/private-chat.interface';
+import { User } from 'src/common/decorator/user.decorator';
+
+const oneSecondInMs = 1000;
 
 @Controller('private-chat')
-@UseFilters(PrismaKnownRequestErrorFilter)
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, ThrottlerGuard)
+@Throttle({ default: { ttl: oneSecondInMs, limit: 60 } })
 export class PrivateChatController {
-  constructor(private readonly privateChatService: PrivateChatService) {}
+  constructor(private privateChatService: PrivateChatService) {}
 
-  @Post()
+  @Post(':friendId')
   @HttpCode(HttpStatus.CREATED)
   async create(
-    @Body() createPrivateChatDto: CreatePrivateChatDto,
-  ): Promise<ChatType> {
-    return await this.privateChatService.create(createPrivateChatDto);
+    @Param('friendId') friendId: string,
+    @User('user_id') userId: string,
+  ): Promise<ContactType> {
+    return await this.privateChatService.create(friendId, userId);
   }
 
   @Get()
-  @HttpCode(HttpStatus.FOUND)
-  async findAll(@Req() request: Request): Promise<ChatType[]> {
-    return await this.privateChatService.findAll(request);
+  async findAll(@User('user_id') userId: string): Promise<ContactType[]> {
+    return await this.privateChatService.findAll(userId);
   }
 
-  @Patch(':id')
+  /**
+   *
+   * WARNING !!!
+   *
+   * Please, do not use this function first! It's need more
+   * further evaluation. :)
+   */
+  // @Patch(':id')
   async update(
     @Param('id') id: string,
     @Body() updatePrivateChatDto: UpdatePrivateChatDto,
-  ): Promise<ChatType> {
+  ): Promise<ContactType> {
     return await this.privateChatService.update(id, updatePrivateChatDto);
   }
 
-  @Delete()
-  async remove(@Body('id') id: string[]): Promise<void> {
+  @Delete(':id')
+  @SkipThrottle()
+  async remove(@Param('id') id: string): Promise<void> {
     return await this.privateChatService.remove(id);
   }
 }

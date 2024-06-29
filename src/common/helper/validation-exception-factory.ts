@@ -1,10 +1,15 @@
-import {
-  BadRequestException,
-  HttpStatus,
-  ValidationError,
-} from '@nestjs/common';
+import { BadRequestException, ValidationError } from '@nestjs/common';
 
-export default (errors: ValidationError[]) => {
+/**
+ * Process validation errors
+ *
+ * @param errors array of validation errors
+ *
+ * @returns BadRequestException error
+ */
+export default function validationExceptionFactory(
+  errors: ValidationError[],
+): BadRequestException {
   const errorResponse = errors.map((error) => {
     return {
       [error.property]: Object.values(error.constraints).join(','),
@@ -12,8 +17,9 @@ export default (errors: ValidationError[]) => {
   });
 
   return new BadRequestException({
-    message: Object.assign({}, ...errorResponse),
-    error: 'Bad Request',
-    statusCode: HttpStatus.BAD_REQUEST,
+    error: {
+      code: 'VALIDATION_ERROR',
+      message: Object.assign({}, ...errorResponse),
+    },
   });
-};
+}

@@ -4,34 +4,36 @@ import {
   Body,
   Patch,
   Delete,
-  UseFilters,
   UseGuards,
   Param,
-  HttpStatus,
-  HttpCode,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { PrismaKnownRequestErrorFilter } from 'src/common/filter/prisma-known-request-error.filter';
 import { UserType } from './interface/user.interface';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { User } from 'src/common/decorator/user.decorator';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ChangeEmailDto } from './dto/change-email.dto';
+
+const twelveHoursInMs = 43200000;
+const oneSecondInMs = 1000;
 
 @Controller('users')
-@UseGuards(AuthGuard)
-@UseFilters(PrismaKnownRequestErrorFilter)
+@UseGuards(AuthGuard, ThrottlerGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private usersService: UsersService) {}
 
-  @Get(':id')
-  @HttpCode(HttpStatus.FOUND)
-  async findOne(@Param('id') id: string): Promise<UserType> {
+  @Get()
+  @Throttle({ default: { limit: 10, ttl: oneSecondInMs } })
+  async findOne(@User('id') id: string): Promise<UserType> {
     return await this.usersService.findOne(id);
   }
 
-  @Get()
-  @HttpCode(HttpStatus.FOUND)
-  async find(@Body('user_id') userId: string): Promise<UserType[]> {
+  @Get(':userId')
+  @Throttle({ default: { limit: 10, ttl: oneSecondInMs } })
+  async find(@Param('userId') userId: string): Promise<UserType[]> {
     return await this.usersService.find(userId);
   }
 
@@ -46,5 +48,23 @@ export class UsersController {
   @Delete()
   async remove(@User('id') id: string): Promise<void> {
     await this.usersService.remove(id);
+  }
+
+  @Patch('change-password')
+  @Throttle({ default: { limit: 3, ttl: twelveHoursInMs } })
+  async changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @User('id') id: string,
+  ): Promise<void> {
+    await this.usersService.changePassword(id, changePasswordDto);
+  }
+
+  @Patch('change-email')
+  @Throttle({ default: { limit: 3, ttl: twelveHoursInMs } })
+  async changeEmail(
+    @Body() changeEmailDto: ChangeEmailDto,
+    @User('id') id: string,
+  ): Promise<UserType> {
+    return await this.usersService.changeEmail(id, changeEmailDto);
   }
 }

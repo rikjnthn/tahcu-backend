@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
-import { Request } from 'express';
+import { BadRequestException } from '@nestjs/common';
 import { PrivateChatService } from './private-chat.service';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
@@ -20,15 +19,18 @@ describe('PrivateChatService', () => {
     });
 
     it('should create private chat contact and return record', async () => {
-      const createPrivateChatDto = {
-        user_id: 'andi',
-        friends_id: 'dina',
-      };
-
       const createdPrivateChatMock = {
-        id: '1',
-        user_id: 'andi',
-        friends_id: 'dina',
+        id: 'contact_id_1',
+        user_id: 'user_1',
+        user: {
+          username: 'username_1',
+          email: 'user_1@gmail.com',
+        },
+        friends_id: 'user_2',
+        friends: {
+          username: 'username_2',
+          email: 'user_2@gmail.com',
+        },
       };
 
       jest
@@ -36,69 +38,52 @@ describe('PrivateChatService', () => {
         .mockResolvedValue(createdPrivateChatMock);
 
       const createdPrivateChat = await privateChatService.create(
-        createPrivateChatDto,
+        'user_1',
+        'user_2',
       );
 
       expect(privateChatService.create).toBeCalled();
-      expect(privateChatService.create).toBeCalledWith(createPrivateChatDto);
+      expect(privateChatService.create).toBeCalledWith('user_1', 'user_2');
 
       expect(createdPrivateChat).toEqual(createdPrivateChatMock);
     });
 
     it('should return exception if friend id and user id are the same when create contact', async () => {
-      const createPrivateChatDto = {
-        user_id: 'andi',
-        friends_id: 'dina',
-      };
-
-      jest.spyOn(privateChatService, 'create').mockRejectedValue(
-        new HttpException(
-          {
-            statusCode: HttpStatus.BAD_REQUEST,
-            message: 'user id and friends id should not be equal',
-          },
-          HttpStatus.BAD_REQUEST,
-        ),
-      );
+      jest
+        .spyOn(privateChatService, 'create')
+        .mockRejectedValue(
+          new BadRequestException('user id and friends id should not be equal'),
+        );
 
       await expect(
-        privateChatService.create(createPrivateChatDto),
+        privateChatService.create('same_user_id', 'same_user_id'),
       ).rejects.toThrowError(
-        new HttpException(
-          {
-            statusCode: HttpStatus.BAD_REQUEST,
-            message: 'user id and friends id should not be equal',
-          },
-          HttpStatus.BAD_REQUEST,
-        ),
+        new BadRequestException('user id and friends id should not be equal'),
       );
     });
 
     it('should return exception if friend id or user id is not found when create contact', async () => {
-      const createPrivateChatDto = {
-        user_id: 'andi_bukan_user',
-        friends_id: 'dina',
-      };
-
       jest.spyOn(privateChatService, 'create').mockRejectedValue(new Error());
 
       await expect(
-        privateChatService.create(createPrivateChatDto),
+        privateChatService.create('not_exist_user_id', 'not_exist_user_id_too'),
       ).rejects.toThrowError();
     });
 
     it('should find private chat contact', async () => {
-      const requestMock = {
-        user: {
-          id: '1',
-        } as any,
-      } as Request;
-
       const foundPrivateChatMock = [
         {
-          id: '1',
-          user_id: 'andi',
-          friends_id: 'dina',
+          id: 'contact_id_1',
+          user_id: 'user_1',
+          user: {
+            username: 'username_1',
+            email: 'user_1@gmail.com',
+          },
+          friends_id: 'user_2',
+          friends: {
+            username: 'username_2',
+            email: 'user_2@gmail.com',
+          },
         },
       ];
 
@@ -106,38 +91,40 @@ describe('PrivateChatService', () => {
         .spyOn(privateChatService, 'findAll')
         .mockResolvedValue(foundPrivateChatMock);
 
-      const foundPrivateChat = await privateChatService.findAll(requestMock);
+      const foundPrivateChat = await privateChatService.findAll('user_1');
 
       expect(privateChatService.findAll).toBeCalled();
-      expect(privateChatService.findAll).toBeCalledWith(requestMock);
+      expect(privateChatService.findAll).toBeCalledWith('user_1');
 
       expect(foundPrivateChat).toEqual(foundPrivateChatMock);
     });
 
     it('should return empty array if private chat not found', async () => {
-      const requestMock = {
-        user: {
-          id: '1',
-        } as any,
-      } as Request;
-
       jest.spyOn(privateChatService, 'findAll').mockResolvedValue([]);
 
-      await expect(privateChatService.findAll(requestMock)).resolves.toEqual(
-        [],
-      );
+      await expect(
+        privateChatService.findAll('not_exist_user_id'),
+      ).resolves.toEqual([]);
     });
 
     it('should update private chat contact and return record', async () => {
       const updatedPrivateChatDto = {
-        user_id: 'andi',
-        friends_id: 'dina_baru',
+        user_id: 'user_1',
+        friends_id: 'new_user_2',
       };
 
       const updatedPrivateChatMock = {
-        id: '1',
-        user_id: 'andi',
-        friends_id: 'dina_baru',
+        id: 'contact_id_1',
+        user_id: 'user_1',
+        user: {
+          username: 'username_1',
+          email: 'user_1@gmail.com',
+        },
+        friends_id: 'new_user_2',
+        friends: {
+          username: 'username_1',
+          email: 'user_2@gmail.com',
+        },
       };
 
       jest
@@ -145,13 +132,13 @@ describe('PrivateChatService', () => {
         .mockResolvedValue(updatedPrivateChatMock);
 
       const updatedPrivateChat = await privateChatService.update(
-        '1',
+        'contact_id_1',
         updatedPrivateChatDto,
       );
 
       expect(privateChatService.update).toBeCalled();
       expect(privateChatService.update).toBeCalledWith(
-        '1',
+        'contact_id_1',
         updatedPrivateChatDto,
       );
 
@@ -160,35 +147,33 @@ describe('PrivateChatService', () => {
 
     it('should return exception if friend id or user id is not found when update contact', async () => {
       const createPrivateChatDto = {
-        user_id: 'andi_bukan_user',
-        friends_id: 'dina',
+        user_id: 'not_exist_user_id',
+        friends_id: 'user_2',
       };
 
       jest.spyOn(privateChatService, 'update').mockRejectedValue(new Error());
 
       await expect(
-        privateChatService.update('1', createPrivateChatDto),
+        privateChatService.update('contact_id_1', createPrivateChatDto),
       ).rejects.toThrowError();
     });
 
     it('should remove private chat contact', async () => {
       jest.spyOn(privateChatService, 'remove').mockResolvedValue(undefined);
 
-      const foundPrivateChat = await privateChatService.remove(['1']);
+      const shouldBeUndefined = await privateChatService.remove('contact_id_1');
 
       expect(privateChatService.remove).toBeCalled();
-      expect(privateChatService.remove).toBeCalledWith(['1']);
+      expect(privateChatService.remove).toBeCalledWith('contact_id_1');
 
-      expect(foundPrivateChat).toBeUndefined();
+      expect(shouldBeUndefined).toBeUndefined();
     });
 
     it('should return exception if contact not found', async () => {
-      jest
-        .spyOn(privateChatService, 'remove')
-        .mockRejectedValue(new NotFoundException());
+      jest.spyOn(privateChatService, 'remove').mockRejectedValue(new Error());
 
       await expect(
-        privateChatService.remove(['not_exist_id']),
+        privateChatService.remove('not_exist_contact_id'),
       ).rejects.toThrowError();
     });
   });
@@ -212,18 +197,16 @@ describe('PrivateChatService', () => {
         prismaService.users.createMany({
           data: [
             {
-              email: 'andi@gmail.com',
-              is_active: true,
+              email: 'user_1@gmail.com',
               password: 'password',
-              user_id: 'andi',
-              username: 'andi',
+              user_id: 'user_1',
+              username: 'username_1',
             },
             {
-              email: 'dina@gmail.com',
-              is_active: true,
+              email: 'user_2@gmail.com',
               password: 'password',
-              user_id: 'dina',
-              username: 'dina',
+              user_id: 'user_2',
+              username: 'username_2',
             },
           ],
         }),
@@ -235,104 +218,97 @@ describe('PrivateChatService', () => {
     });
 
     it('should create private chat contact and return record', async () => {
-      const [andi, dina] = await prismaService.users.findMany({
-        select: { id: true },
-
+      const user_1 = await prismaService.users.findFirst({
+        select: { user_id: true },
         where: {
-          OR: [{ username: 'andi' }, { username: 'dina' }],
+          user_id: 'user_1',
         },
       });
-      const createPrivateChatDto = {
-        user_id: andi.id,
-        friends_id: dina.id,
-      };
+
+      const user_2 = await prismaService.users.findFirst({
+        select: { user_id: true },
+        where: {
+          user_id: 'user_2',
+        },
+      });
+
+      const user_id = user_1.user_id;
+      const friends_id = user_2.user_id;
 
       const createdPrivateChat = await privateChatService.create(
-        createPrivateChatDto,
+        friends_id,
+        user_id,
       );
 
-      expect(createdPrivateChat.friends_id).toEqual(
-        createPrivateChatDto.friends_id,
-      );
-      expect(createdPrivateChat.user_id).toEqual(createPrivateChatDto.user_id);
+      expect(createdPrivateChat.friends_id).toEqual(friends_id);
+      expect(createdPrivateChat.user_id).toEqual(user_id);
     });
 
     it('should return exception if friend id and user id are the same when create contact', async () => {
-      const createPrivateChatDto = {
-        user_id: 'andi',
-        friends_id: 'andi',
-      };
-
       await expect(
-        privateChatService.create(createPrivateChatDto),
-      ).rejects.toThrowError(
-        new HttpException(
-          {
-            statusCode: HttpStatus.BAD_REQUEST,
-            message: 'user id and friends id should not be equal',
-          },
-          HttpStatus.BAD_REQUEST,
-        ),
-      );
+        privateChatService.create('same_user_id', 'same_user_id'),
+      ).rejects.toThrowError();
     });
 
     it('should return exception if friend id or user id is not found when create contact', async () => {
-      const createPrivateChatDto = {
-        user_id: 'andi_bukan_user',
-        friends_id: 'dina',
-      };
-
       await expect(
-        privateChatService.create(createPrivateChatDto),
+        privateChatService.create('not_exist_user_id', 'user_2'),
       ).rejects.toThrowError();
     });
 
     it('should find private chat contact', async () => {
-      const [andi, dina] = await prismaService.users.findMany({
-        select: { id: true },
+      const user_1 = await prismaService.users.findFirst({
+        select: { user_id: true },
         where: {
-          OR: [{ username: 'andi' }, { username: 'dina' }],
+          user_id: 'user_1',
         },
       });
 
-      const requestMock = {
-        user: {
-          id: andi.id,
-        } as any,
-      } as Request;
+      const user_2 = await prismaService.users.findFirst({
+        select: { user_id: true },
+        where: {
+          user_id: 'user_2',
+        },
+      });
 
-      const [foundPrivateChat] = await privateChatService.findAll(requestMock);
+      const [foundPrivateChat] = await privateChatService.findAll(
+        user_1.user_id,
+      );
 
-      expect(foundPrivateChat.friends_id).toEqual(dina.id);
-      expect(foundPrivateChat.user_id).toEqual(andi.id);
+      expect(foundPrivateChat.friends_id).toEqual(user_2.user_id);
+      expect(foundPrivateChat.user_id).toEqual(user_1.user_id);
     });
 
     it('should return empty array if private chat not found', async () => {
-      const requestMock = {
-        user: { id: '1' } as any,
-      } as Request;
-
-      await expect(privateChatService.findAll(requestMock)).resolves.toEqual(
-        [],
-      );
+      await expect(
+        privateChatService.findAll('not_exist_user_id'),
+      ).resolves.toEqual([]);
     });
 
     it('should update private chat contact and return record', async () => {
-      const [andi, dina] = await prismaService.users.findMany({
-        select: { id: true },
+      const user_1 = await prismaService.users.findFirst({
+        select: { user_id: true },
         where: {
-          OR: [{ username: 'andi' }, { username: 'dina' }],
+          user_id: 'user_1',
         },
       });
+
+      const user_2 = await prismaService.users.findFirst({
+        select: { user_id: true },
+        where: {
+          user_id: 'user_2',
+        },
+      });
+
       const updatedPrivateChatDto = {
-        user_id: andi.id,
-        friends_id: dina.id,
+        user_id: user_1.user_id,
+        friends_id: user_2.user_id,
       };
 
       const privateChatId = await prismaService.contact.findFirst({
         select: { id: true },
         where: {
-          OR: [{ user_id: andi.id }, { user_id: dina.id }],
+          OR: [{ user_id: user_1.user_id }, { friends_id: user_1.user_id }],
         },
       });
 
@@ -341,27 +317,36 @@ describe('PrivateChatService', () => {
         updatedPrivateChatDto,
       );
 
-      expect(updatedPrivateChat.friends_id).toEqual(dina.id);
-      expect(updatedPrivateChat.user_id).toEqual(andi.id);
+      expect(updatedPrivateChat.friends_id).toEqual(
+        updatedPrivateChatDto.friends_id,
+      );
+      expect(updatedPrivateChat.user_id).toEqual(updatedPrivateChatDto.user_id);
     });
 
     it('should return exception if friend id or user id is not found when update contact', async () => {
-      const [andi, dina] = await prismaService.users.findMany({
-        select: { id: true },
+      const user_1 = await prismaService.users.findFirst({
+        select: { user_id: true },
         where: {
-          OR: [{ username: 'andi' }, { username: 'dina' }],
+          user_id: 'user_1',
+        },
+      });
+
+      const user_2 = await prismaService.users.findFirst({
+        select: { user_id: true },
+        where: {
+          user_id: 'user_2',
         },
       });
 
       const privateChatId = await prismaService.contact.findFirst({
         select: { id: true },
         where: {
-          OR: [{ user_id: andi.id }, { user_id: dina.id }],
+          OR: [{ user_id: user_1.user_id }, { user_id: user_2.user_id }],
         },
       });
       const createPrivateChatDto = {
-        user_id: 'andi_bukan_user',
-        friends_id: 'dina',
+        user_id: 'not_exist_user_id',
+        friends_id: 'user_2',
       };
 
       await expect(
@@ -370,28 +355,35 @@ describe('PrivateChatService', () => {
     });
 
     it('should remove private chat contact', async () => {
-      const [andi, dina] = await prismaService.users.findMany({
-        select: { id: true },
+      const user_1 = await prismaService.users.findFirst({
+        select: { user_id: true },
         where: {
-          OR: [{ username: 'andi' }, { username: 'dina' }],
+          user_id: 'user_1',
+        },
+      });
+
+      const user_2 = await prismaService.users.findFirst({
+        select: { user_id: true },
+        where: {
+          user_id: 'user_2',
         },
       });
 
       const privateChatId = await prismaService.contact.findFirst({
         select: { id: true },
         where: {
-          OR: [{ user_id: andi.id }, { user_id: dina.id }],
+          OR: [{ user_id: user_1.user_id }, { user_id: user_2.user_id }],
         },
       });
 
       await expect(
-        privateChatService.remove([privateChatId.id]),
+        privateChatService.remove(privateChatId.id),
       ).resolves.toBeUndefined();
     });
 
     it('should return exception if contact not found', async () => {
       await expect(
-        privateChatService.remove(['not_exist_id']),
+        privateChatService.remove('not_exist_contact_id'),
       ).rejects.toThrowError();
     });
 

@@ -1,16 +1,15 @@
-import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+import { IsDate, IsOptional, IsString } from 'class-validator';
 
 export class FindMessageDto {
-  @IsString()
-  @IsNotEmpty()
-  sender_id: string;
+  @IsString({ message: 'contact id should be a string' })
+  @IsOptional()
+  contact_id?: string;
 
-  @IsString()
-  @IsNotEmpty()
-  receiver_id: string;
+  @IsString({ message: 'group id should be a string' })
+  @IsOptional()
+  group_id?: string;
 
-  @IsNumber()
-  @Min(0)
-  @IsNotEmpty()
-  lower_limit: number;
+  @IsDate({ message: 'data is not valid' })
+  @IsOptional()
+  date?: Date;
 }

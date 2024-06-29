@@ -2,14 +2,24 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 
 import { AppModule } from './app.module';
 import validationExceptionFactory from './common/helper/validation-exception-factory';
+import { ThrottlerFilter } from './common/filter/throttler.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: process.env.NODE_ENV === 'development' ? ['log', 'warn'] : false,
+  });
 
-  app.use(cookieParser());
+  app.use(helmet(), cookieParser());
+
+  app.enableCors({
+    origin: [process.env.ORIGIN_URL],
+    methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH'],
+    credentials: true,
+  });
 
   if (process.env.NODE_ENV === 'development') {
     const config = new DocumentBuilder()
@@ -26,8 +36,12 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       exceptionFactory: validationExceptionFactory,
+      whitelist: true,
+      forbidNonWhitelisted: true,
     }),
   );
+
+  app.useGlobalFilters(new ThrottlerFilter());
 
   await app.listen(process.env.APP_PORT);
 }

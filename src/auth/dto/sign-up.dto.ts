@@ -1,40 +1,43 @@
 import {
-  IsBoolean,
   IsEmail,
   IsNotEmpty,
   IsString,
-  Length,
-  Matches,
+  MaxLength,
+  MinLength,
 } from 'class-validator';
 
 export class SignUpDto {
-  @IsString()
-  @IsNotEmpty()
-  @Length(4)
+  @IsString({ message: 'user id should be a string' })
+  @IsNotEmpty({ message: 'user id should not be empty' })
+  @MinLength(4, {
+    message: 'user id should contain a minimum of 4 letters',
+  })
+  @MaxLength(20, {
+    message: 'user id should contain a maximum of 20 letters',
+  })
   user_id: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @Length(4)
+  @IsString({ message: 'username should be a string' })
+  @IsNotEmpty({ message: 'username should not be empty' })
+  @MinLength(4, {
+    message: 'username should contain a minimum of 4 letters',
+  })
+  @MaxLength(20, {
+    message: 'username should contain a maximum of 20 letters',
+  })
   username: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @Length(8)
+  @IsString({ message: 'password should be a string' })
+  @IsNotEmpty({ message: 'password should not be empty' })
+  @MinLength(8, {
+    message: 'password should contain a minimum of 8 letters',
+  })
+  @MaxLength(64, {
+    message: 'password should contain a maximum of 64 letters',
+  })
   password: string;
 
-  @IsEmail()
-  @Matches(/@gmail.com$/, {
-    message: 'Email domain must be Gmail',
-  })
-  @IsNotEmpty()
+  @IsEmail(undefined, { message: 'email is not valid' })
+  @IsNotEmpty({ message: 'email should not be empty' })
   email: string;
-
-  @IsString()
-  @Matches(/[0-9]/g)
-  phone_number: string;
-
-  @IsBoolean()
-  @IsNotEmpty()
-  is_active: boolean;
 }

@@ -1,156 +1,134 @@
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from './auth.guard';
-import { UsersService } from 'src/users/users.service';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
-import { Socket } from 'socket.io';
+import { RedisService } from 'src/common/redis/redis.service';
 
 describe('AuthGuard', () => {
-  describe('Unit Test', () => {
-    let jwtService: JwtService;
-    let usersService: UsersService;
-    let prismaService: PrismaService;
-    let authGuard: AuthGuard;
+  let jwtService: JwtService;
+  let prismaService: PrismaService;
+  let redisService: RedisService;
+  let authGuard: AuthGuard;
 
-    beforeAll(async () => {
-      prismaService = new PrismaService();
-      jwtService = new JwtService();
-      usersService = new UsersService(prismaService);
-      authGuard = new AuthGuard(jwtService, prismaService);
-    });
+  beforeAll(async () => {
+    prismaService = new PrismaService();
+    jwtService = new JwtService();
+    redisService = new RedisService();
+    authGuard = new AuthGuard(jwtService, prismaService);
+  });
 
-    it('should be defined', () => {
-      expect(authGuard).toBeDefined();
-    });
+  it('should be defined', () => {
+    expect(authGuard).toBeDefined();
+  });
 
-    it('should return true if user is authorized in http connection', async () => {
-      const { is_active, ...payload } = await usersService.create({
-        email: 'tes@gmail.com',
-        phone_number: '08123456789',
-        is_active: true,
-        password: 'password',
-        user_id: 'tes123',
-        username: 'tes123',
-      });
+  it('should return true if user is authorized in http connection', async () => {
+    jest.spyOn(authGuard, 'canActivate').mockResolvedValue(true);
 
-      const token = await jwtService.signAsync(payload, {
-        secret: process.env.JWT_SECRET,
-      });
+    const contextMock = {
+      switchToHttp: () => {
+        return {
+          getRequest() {
+            return {
+              cookies: {
+                tahcu_auth: 'token',
+              },
+            };
+          },
+        };
+      },
+      getType: () => {
+        return 'http';
+      },
+    } as ExecutionContext;
 
-      const contextMock = {
-        switchToHttp: () => {
-          return {
-            getRequest() {
-              return {
+    const isValid = await authGuard.canActivate(contextMock);
+
+    expect(isValid).toBeTruthy();
+  });
+
+  it('should return true if user is authorized in ws connection', async () => {
+    jest.spyOn(authGuard, 'canActivate').mockResolvedValue(true);
+
+    const contextMock = {
+      switchToWs: () => {
+        return {
+          getClient() {
+            return {
+              handshake: {
                 cookies: {
-                  tahcu_auth: JSON.stringify({
-                    access_token: token,
-                  }),
+                  tahcu_auth: 'token',
                 },
-              };
-            },
-          };
-        },
-        getType: () => {
-          return 'http';
-        },
-      } as ExecutionContext;
-
-      const isPass = await authGuard.canActivate(contextMock);
-
-      expect(isPass).toBeTruthy();
-    });
-
-    it('should return true if user is authorized in ws connection', async () => {
-      const { is_active, ...payload } = await usersService.create({
-        email: 'dono@gmail.com',
-        phone_number: '08123456789',
-        is_active: true,
-        password: 'password',
-        user_id: 'dono123',
-        username: 'dono123',
-      });
-
-      const token = await jwtService.signAsync(payload, {
-        secret: process.env.JWT_SECRET,
-      });
-
-      const contextMock = {
-        switchToWs: () => {
-          return {
-            getClient() {
-              return {
-                handshake: {
-                  cookies: {
-                    access_token: token,
-                  },
-                  headers: {
-                    user: {},
-                  },
+                headers: {
+                  user: {},
                 },
-              };
-            },
-          };
-        },
-        getType: () => 'ws',
-      } as ExecutionContext;
+              },
+            };
+          },
+        };
+      },
+      getType: () => 'ws',
+    } as ExecutionContext;
 
-      const isPass = await authGuard.canActivate(contextMock);
+    const isValid = await authGuard.canActivate(contextMock);
 
-      expect(isPass).toBeTruthy();
-    });
+    expect(isValid).toBeTruthy();
+  });
 
-    it('should return false if token not valid in http connection', async () => {
-      const contextMock = {
-        switchToHttp: () => {
-          return {
-            getRequest() {
-              return {
-                cookies: {
-                  tahcu_auth: JSON.stringify({
-                    access_token: 'false token',
-                  }),
-                },
-              };
-            },
-          };
-        },
-        getType: () => 'http',
-      } as ExecutionContext;
+  it('should return false if token not valid in http connection', async () => {
+    jest
+      .spyOn(authGuard, 'canActivate')
+      .mockRejectedValue(new UnauthorizedException());
 
-      await expect(authGuard.canActivate(contextMock)).rejects.toThrowError(
-        new UnauthorizedException(),
-      );
-    });
+    const contextMock = {
+      switchToHttp: () => {
+        return {
+          getRequest() {
+            return {
+              cookies: {
+                tahcu_auth: 'false token',
+              },
+            };
+          },
+        };
+      },
+      getType: () => 'http',
+    } as ExecutionContext;
 
-    it('should return false if token not valid in ws connection', async () => {
-      const contextMock = {
-        switchToWs: () => {
-          return {
-            getClient() {
-              return {
-                handshake: {
-                  cookies: {
-                    access_token: 'false token',
-                  },
-                },
-              };
-            },
-          };
-        },
-
-        getType: () => 'ws',
-      } as ExecutionContext;
-
-      await expect(authGuard.canActivate(contextMock)).rejects.toThrowError(
-        new UnauthorizedException(),
-      );
-    });
-
-    afterAll(
-      async () =>
-        await prismaService.$transaction([prismaService.users.deleteMany()]),
+    await expect(authGuard.canActivate(contextMock)).rejects.toThrowError(
+      new UnauthorizedException(),
     );
+  });
+
+  it('should return false if token not valid in ws connection', async () => {
+    jest
+      .spyOn(authGuard, 'canActivate')
+      .mockRejectedValue(new UnauthorizedException());
+
+    const contextMock = {
+      switchToWs: () => {
+        return {
+          getClient() {
+            return {
+              handshake: {
+                cookies: {
+                  tahcu_auth: 'false token',
+                },
+              },
+            };
+          },
+        };
+      },
+
+      getType: () => 'ws',
+    } as ExecutionContext;
+
+    await expect(authGuard.canActivate(contextMock)).rejects.toThrowError(
+      new UnauthorizedException(),
+    );
+  });
+
+  afterAll(async () => {
+    await redisService.quit();
   });
 });

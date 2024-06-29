@@ -1,4 +1,5 @@
 import {
+  Logger,
   UseFilters,
   UseGuards,
   UsePipes,
@@ -9,40 +10,63 @@ import {
   SubscribeMessage,
   MessageBody,
   OnGatewayConnection,
+  OnGatewayInit,
+  OnGatewayDisconnect,
+  WebSocketServer,
+  ConnectedSocket,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { Throttle } from '@nestjs/throttler';
+import { Server, Socket } from 'socket.io';
 import { parse } from 'cookie';
 
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
-import { PrismaKnownErrorWebsocket } from 'src/common/filter/prisma-known-error-websocket.filter';
 import { WsExceptionFilter } from 'src/common/filter/ws-exception.filter';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { FindMessageDto } from './dto/find-messages.dto';
 import validationExceptionFactory from 'src/common/helper/validation-exception-factory';
 import { MessageType } from './interface/message.interface';
+import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
+import { DeleteMessageDto } from './dto/delete-message.dto';
 
-@WebSocketGateway(8081, {
-  transports: ['websocket'],
-  path: '/message/socket.io',
+const oneSecondInMs = 1000;
+
+@WebSocketGateway({
+  path: '/message',
   namespace: 'message',
+  cors: {
+    origin: [process.env.ORIGIN_URL],
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 })
-@UseFilters(PrismaKnownErrorWebsocket, WsExceptionFilter)
-@UseGuards(AuthGuard)
+@UseFilters(WsExceptionFilter)
+@UseGuards(AuthGuard, WsThrottlerGuard)
 @UsePipes(
   new ValidationPipe({
     exceptionFactory: validationExceptionFactory,
   }),
 )
-export class MessageGateway implements OnGatewayConnection {
-  constructor(private readonly messageService: MessageService) {}
+@Throttle({ default: { ttl: oneSecondInMs, limit: 60 } })
+export class MessageGateway
+  implements OnGatewayConnection, OnGatewayInit, OnGatewayDisconnect
+{
+  private readonly logger = new Logger(MessageGateway.name);
+
+  @WebSocketServer()
+  private readonly server: Server;
+
+  constructor(private messageService: MessageService) {}
 
   @SubscribeMessage('create')
   async create(
-    @MessageBody() createMessageDto: CreateMessageDto,
-  ): Promise<MessageType> {
-    return await this.messageService.create(createMessageDto);
+    @MessageBody('chat_id') chatId: string,
+    @MessageBody('data') createMessageDto: CreateMessageDto,
+  ): Promise<void> {
+    const message = await this.messageService.create(createMessageDto);
+
+    this.server.to(chatId).emit('message', message);
   }
 
   @SubscribeMessage('find-all')
@@ -54,23 +78,71 @@ export class MessageGateway implements OnGatewayConnection {
 
   @SubscribeMessage('update')
   async update(
-    @MessageBody('id') id: string,
-    @MessageBody('message') updateMessageDto: UpdateMessageDto,
-  ): Promise<MessageType> {
-    return await this.messageService.update(id, updateMessageDto);
+    @MessageBody('chat_id') chatId: string,
+    @MessageBody('data') updateMessageDto: UpdateMessageDto,
+  ): Promise<void> {
+    const message = await this.messageService.update(updateMessageDto);
+
+    this.server.to(chatId).emit('updated-message', message);
   }
 
   @SubscribeMessage('remove')
-  async remove(@MessageBody('id') id: string[]): Promise<void> {
-    return await this.messageService.remove(id);
+  async remove(
+    @MessageBody('chat_id') chatId: string,
+    @MessageBody('data') deleteMessageDto: DeleteMessageDto,
+  ): Promise<void> {
+    await this.messageService.remove(deleteMessageDto.ids);
+
+    this.server.to(chatId).emit('deleted-message', deleteMessageDto.ids);
+  }
+
+  @SubscribeMessage('join-room')
+  joinRoom(
+    @MessageBody('ids') ids: string[],
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.logger.log('Join chat rooms');
+    client.join(ids);
+  }
+
+  @SubscribeMessage('remove-room')
+  removeRoom(@MessageBody('id') id: string, @ConnectedSocket() client: Socket) {
+    this.logger.log('Leave chat room');
+    client.leave(id);
+  }
+
+  afterInit(): void {
+    this.logger.log('Websocket initialized');
   }
 
   handleConnection(client: Socket): void {
-    const request = client.handshake;
+    this.logger.log('Websocket connected');
 
-    const cookie = request.headers.cookie;
-    const tahcu_auth = parse(cookie).tahcu_auth;
+    const handshake = client.handshake;
 
-    request['cookies'] = JSON.parse(tahcu_auth);
+    const cookies = parse(handshake.headers.cookie);
+
+    const csrfTokenCookie = cookies.CSRF_TOKEN;
+    const csrfTokenHeader = handshake.headers['x-csrf-token'];
+
+    if (!csrfTokenCookie || !csrfTokenHeader) {
+      this.server.emit('error', { error: { code: 'UNAUTHORIZED' } });
+      client.disconnect();
+      return;
+    }
+
+    if (csrfTokenCookie !== csrfTokenHeader) {
+      this.server.emit('error', { error: { code: 'UNAUTHORIZED' } });
+      client.disconnect();
+      return;
+    }
+
+    const tahcu_auth = cookies.tahcu_auth;
+
+    handshake['cookies'] = { tahcu_auth };
+  }
+
+  handleDisconnect(): void {
+    this.logger.log('Close websocket connection');
   }
 }

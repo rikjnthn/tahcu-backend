@@ -4,14 +4,21 @@ import {
   Catch,
   UnauthorizedException,
 } from '@nestjs/common';
-import { BaseWsExceptionFilter, WsException } from '@nestjs/websockets';
+import { WsException } from '@nestjs/websockets';
+import { Socket } from 'socket.io';
 
-@Catch(WsException, UnauthorizedException, BadRequestException)
-export class WsExceptionFilter extends BaseWsExceptionFilter {
-  catch(exception: unknown, host: ArgumentsHost) {
-    const wsException = new WsException(
-      (exception as BadRequestException).getResponse(),
-    );
-    super.catch(wsException, host);
+@Catch(UnauthorizedException, BadRequestException)
+export class WsExceptionFilter {
+  catch(
+    exception: WsException | UnauthorizedException | BadRequestException,
+    host: ArgumentsHost,
+  ) {
+    const client = host.switchToWs().getClient<Socket>();
+
+    this.emitException(exception, client);
+  }
+
+  private emitException(errObject: Record<string, any>, client: Socket) {
+    client.emit('error', errObject);
   }
 }
