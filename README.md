@@ -71,3 +71,28 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](LICENSE).
+
+## Env file
+
+DATABASE_USER=""
+DATABASE_PASSWORD=""
+DATABASE_NAME=""
+DATABASE_URL="postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost:5432/${DATABASE_NAME}?schema=public"
+NODE_ENV="development" | "production"
+APP_PORT=""
+JWT_SECRET=""
+JWT_EXPIRED="" jwt expiry time
+COOKIE_EXPIRED="" cookie expiry time
+DEFAULT_THROTTLER_TTL="" throttler time
+DEFAULT_THROTTLER_LIMIT="" throttler limit
+ORIGIN_URL="" client url
+CSRF_SECRET=""
+COOKIE_DOMAIN=""
+COOKIE_PATH=""
+EMAIL_HOST=""
+EMAIL_PORT=""
+EMAIL_USER=""
+EMAIL_PASS=""
+EMAIL_FROM=""
+DRAGONFLY_PORT=""
+DRAGONFLY_HOST=""
