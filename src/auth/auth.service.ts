@@ -7,6 +7,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { isEmail } from 'class-validator';
+import { Prisma } from '@prisma/client';
 
 import { SignUpDto } from './dto/sign-up.dto';
 import { LoginDto } from './dto/login.dto';
@@ -17,6 +18,8 @@ import { AuthReturnType, UserPayloadType } from './interface/auth.interface';
 import { EmailService } from 'src/common/email/email.service';
 import { OtpService } from 'src/common/otp/otp.service';
 import { SendOTPDto } from './dto/send-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import hashPassword from 'src/common/helper/hash-password';
 
 @Injectable()
 export class AuthService {
@@ -132,6 +135,40 @@ export class AuthService {
   }
 
   /**
+   * Send reset password otp
+   *
+   * @param email
+   */
+  async sendResetPasswordOtp(email: string): Promise<void> {
+    this.logger.log('Start sending reset password otp');
+    if (!email) {
+      throw new BadRequestException({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Email should not be empty',
+        },
+      });
+    }
+
+    this.logger.log('Find user');
+    const user = await this.prismaService.users.findFirst({ where: { email } });
+
+    if (!user) {
+      this.logger.log('User not found');
+
+      throw new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'User not found',
+        },
+      });
+    }
+
+    this.logger.log('Send otp');
+    await this.emailService.sendEmail(email);
+  }
+
+  /**
    * Generate user's session id and CSRF token
    *
    * @param userData
@@ -150,7 +187,7 @@ export class AuthService {
     const CSRF_TOKEN = generateCsrfToken(tahcu_authToken);
 
     this.logger.log('Token generated');
-    return [tahcu_authToken, CSRF_TOKEN];
+    return { tahcu_authToken, CSRF_TOKEN };
   }
 
   /**
@@ -176,16 +213,8 @@ export class AuthService {
   async signUp(signUpDto: SignUpDto, otp: string): Promise<AuthReturnType> {
     this.logger.log('Start user sign up');
 
-    const isOtpValid = await this.otpService.validateOtp(otp, signUpDto.email);
-
-    if (!isOtpValid) {
-      throw new BadRequestException({
-        error: {
-          code: 'INVALID',
-          message: 'OTP is not valid',
-        },
-      });
-    }
+    // First, validate the otp. If valid, then continue the process
+    await this.otpService.validateOtp(otp, signUpDto.email);
 
     const user = await this.usersService.create(signUpDto);
 
@@ -275,6 +304,48 @@ export class AuthService {
 
     this.logger.log('Token refreshed');
 
-    return [tahcu_authToken, CSRF_TOKEN];
+    return { tahcu_authToken, CSRF_TOKEN };
+  }
+
+  /**
+   * Reset password
+   *
+   * @param resetPasswordDto
+   */
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<void> {
+    this.logger.log('Start reset password');
+
+    // First, validate the otp. If valid, then continue the process
+    await this.otpService.validateOtp(
+      resetPasswordDto.otp,
+      resetPasswordDto.email,
+    );
+
+    const password = await hashPassword(resetPasswordDto.password);
+
+    try {
+      await this.prismaService.users.update({
+        where: {
+          email: resetPasswordDto.email,
+        },
+        data: { password },
+      });
+
+      this.logger.log('Password reset');
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          this.logger.warn('User not found');
+          throw new BadRequestException({
+            error: {
+              code: 'NOT_FOUND',
+              message: 'User account to reset password does not exist',
+            },
+          });
+        }
+
+        throw error;
+      }
+    }
   }
 }

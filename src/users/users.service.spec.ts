@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtModule } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+
 import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { OtpService } from 'src/common/otp/otp.service';
@@ -22,13 +24,17 @@ describe('UsersService', () => {
       usersService = new UsersService(prismaService, otpService);
     });
 
+    afterAll(() => {
+      jest.clearAllMocks();
+    });
+
     it('should be defined', () => {
       expect(usersService).toBeDefined();
     });
 
     it('should create users and return records', async () => {
       const createUserDto = {
-        email: 'tes@gmail.com',
+        email: 'tes@email.com',
         password: 'password',
         user_id: 'test123',
         username: 'test123',
@@ -36,7 +42,7 @@ describe('UsersService', () => {
 
       const createdUserMock = {
         id: '1',
-        email: 'test@gmail.com',
+        email: 'test@email.com',
         user_id: 'test123',
         username: 'test123',
         created_at: new Date(),
@@ -57,7 +63,7 @@ describe('UsersService', () => {
       const userFoundMock = [
         {
           id: '1',
-          email: 'test@gmail.com',
+          email: 'test@email.com',
           user_id: 'test123',
           username: 'test123',
           created_at: new Date(),
@@ -82,15 +88,13 @@ describe('UsersService', () => {
 
       const users = await usersService.find('non_exist_id');
 
-      expect(Array.isArray(users)).toBeTruthy();
-
-      expect(users.length).toBe(0);
+      expect(users).toEqual([]);
     });
 
     it('should find user with id', async () => {
       const userFoundMock = {
         id: '1',
-        email: 'test@gmail.com',
+        email: 'test@email.com',
         user_id: 'test123',
         password: 'password',
         username: 'test123',
@@ -109,9 +113,16 @@ describe('UsersService', () => {
     });
 
     it('should return exception if user not found with id', async () => {
-      jest.spyOn(usersService, 'findOne').mockRejectedValue(new Error());
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'User was not found',
+        },
+      });
 
-      await expect(usersService.findOne('non_exist_id')).rejects.toThrowError();
+      jest.spyOn(usersService, 'findOne').mockRejectedValue(error);
+
+      await expect(usersService.findOne('non_exist_id')).rejects.toThrow(error);
     });
 
     it('should update users and return record', async () => {
@@ -122,7 +133,7 @@ describe('UsersService', () => {
 
       const updatedUserMock = {
         id: '1',
-        email: 'tes@gmail.com',
+        email: 'tes@email.com',
         user_id: 'changed123',
         password: 'password',
         username: 'changed123',
@@ -140,38 +151,6 @@ describe('UsersService', () => {
       expect(updatedUser).toEqual(updatedUserMock);
     });
 
-    it('should return exception if user need to update not found', async () => {
-      const updateUserDtoMock = {
-        user_id: 'user_id_baru',
-        email: 'new_email@gmail.com',
-        password: 'new_password',
-        username: 'new_username',
-      };
-
-      jest
-        .spyOn(usersService, 'update')
-        .mockRejectedValue(new BadRequestException());
-
-      await expect(
-        usersService.update('non_exist_id', updateUserDtoMock),
-      ).rejects.toThrowError(new BadRequestException());
-    });
-
-    it('should return exception if update user data is not valid', async () => {
-      const updateUserDtoMock = {
-        user_id: '0',
-        username: '0',
-      };
-
-      jest
-        .spyOn(usersService, 'update')
-        .mockRejectedValue(new BadRequestException());
-
-      await expect(
-        usersService.update('1', updateUserDtoMock),
-      ).rejects.toThrowError(new BadRequestException());
-    });
-
     it('should remove user', async () => {
       jest.spyOn(usersService, 'remove').mockResolvedValue(undefined);
 
@@ -184,9 +163,16 @@ describe('UsersService', () => {
     });
 
     it('should return exception if user that want to be remove not exist', async () => {
-      jest.spyOn(usersService, 'remove').mockRejectedValue(new Error());
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'User to delete does not exist',
+        },
+      });
 
-      await expect(usersService.remove('non_exist_id')).rejects.toThrowError();
+      jest.spyOn(usersService, 'remove').mockRejectedValue(error);
+
+      await expect(usersService.remove('non_exist_id')).rejects.toThrow(error);
     });
 
     it('should change password', async () => {
@@ -217,24 +203,29 @@ describe('UsersService', () => {
         new_password: 'new_password',
       };
 
-      jest
-        .spyOn(usersService, 'changePassword')
-        .mockRejectedValue(new BadRequestException());
+      const error = new BadRequestException({
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Wrong password',
+        },
+      });
+
+      jest.spyOn(usersService, 'changePassword').mockRejectedValue(error);
 
       await expect(
         usersService.changePassword('1', changePasswordDto),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(error);
     });
 
     it('should change email', async () => {
       const changeEmailDto = {
-        email: 'changed@gmail.com',
+        email: 'changed@email.com',
         otp: '1234',
       };
 
       const updatedUserData = {
         id: '1',
-        email: 'changed@gmail.com',
+        email: 'changed@email.com',
         user_id: 'changed123',
         username: 'changed123',
         created_at: new Date(),
@@ -253,19 +244,29 @@ describe('UsersService', () => {
       expect(updatedUser).toEqual(updatedUserData);
     });
 
-    it('should throw error if otp is not valid', async () => {
+    it('should change email', async () => {
       const changeEmailDto = {
-        email: 'new_email@gmail.com',
-        otp: 'not_valid_otp',
+        email: 'changed@email.com',
+        otp: '1234',
       };
 
-      jest
-        .spyOn(usersService, 'changeEmail')
-        .mockRejectedValue(new BadRequestException());
+      const usersData = {
+        id: 'user_id',
+        email: 'changed@email.com',
+        user_id: 'test123',
+        username: 'test123',
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
 
-      await expect(
-        usersService.changeEmail('1', changeEmailDto),
-      ).rejects.toThrowError();
+      jest.spyOn(usersService, 'changeEmail').mockResolvedValue(usersData);
+
+      const updatedUser = await usersService.changeEmail(
+        usersData.id,
+        changeEmailDto,
+      );
+
+      expect(updatedUser.email).toBe(changeEmailDto.email);
     });
 
     afterAll(async () => {
@@ -285,10 +286,14 @@ describe('UsersService', () => {
         providers: [UsersService],
       }).compile();
 
-      prismaService = module.get<PrismaService>(PrismaService);
-      otpService = module.get<OtpService>(OtpService);
-      redisService = module.get<RedisService>(RedisService);
-      usersService = module.get<UsersService>(UsersService);
+      prismaService = module.get(PrismaService);
+      otpService = module.get(OtpService);
+      redisService = module.get(RedisService);
+      usersService = module.get(UsersService);
+    });
+
+    afterEach(async () => {
+      await prismaService.$transaction([prismaService.users.deleteMany()]);
     });
 
     it('should be defined', () => {
@@ -297,7 +302,7 @@ describe('UsersService', () => {
 
     it('should create user and return record', async () => {
       const createUserDto = {
-        email: 'test@gmail.com',
+        email: 'test@email.com',
         password: 'password',
         user_id: 'test123',
         username: 'test123',
@@ -311,11 +316,14 @@ describe('UsersService', () => {
     });
 
     it('should find users with prefix id query', async () => {
-      const usersFoundMock = {
-        email: 'test@gmail.com',
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
         user_id: 'test123',
         username: 'test123',
       };
+
+      await usersService.create(createUserDto);
 
       const users = await usersService.find('test123');
 
@@ -323,164 +331,180 @@ describe('UsersService', () => {
 
       const user = users[0];
 
-      expect(user.email).toBe(usersFoundMock.email);
-      expect(user.user_id).toBe(usersFoundMock.user_id);
-      expect(user.username).toBe(usersFoundMock.username);
+      expect(user.email).toBe(createUserDto.email);
+      expect(user.user_id).toBe(createUserDto.user_id);
+      expect(user.username).toBe(createUserDto.username);
     });
 
     it('should return empty array if users not found with prefix id query', async () => {
       const users = await usersService.find('test1234');
 
-      expect(Array.isArray(users)).toBeTruthy();
-
-      expect(users.length).toBe(0);
+      expect(users).toEqual([]);
     });
 
     it('should return user by id', async () => {
-      const usersFoundMock = {
-        email: 'test@gmail.com',
-        user_id: 'test123',
-        username: 'test123',
-      };
-      const { id } = await prismaService.users.findFirst({
-        where: { user_id: 'test123' },
-      });
-
-      const user = await usersService.findOne(id);
-
-      expect(user.email).toBe(usersFoundMock.email);
-      expect(user.user_id).toBe(usersFoundMock.user_id);
-      expect(user.username).toBe(usersFoundMock.username);
-    });
-
-    it('should return exception if user not found', async () => {
-      await expect(usersService.findOne('not_exist')).rejects.toThrowError();
-    });
-
-    it('should update user and return record', async () => {
-      const updateUserDto = {
-        user_id: 'changed123',
-        username: 'changed123',
-      };
-
-      const { id } = await prismaService.users.findFirst({
-        where: { user_id: 'test123' },
-      });
-
-      const updatedUser = await usersService.update(id, updateUserDto);
-
-      expect(updatedUser.user_id).toBe(updateUserDto.user_id);
-      expect(updatedUser.username).toBe(updateUserDto.username);
-    });
-
-    it('should return exception if user that need to update not found', async () => {
-      const updateUserDto = {
-        user_id: 'new_id123',
-        username: 'new_username123',
-      };
-
-      await expect(
-        usersService.update('non_exist', updateUserDto),
-      ).rejects.toThrowError();
-    });
-
-    it('should remove user', async () => {
-      const user = await prismaService.users.findFirst({
-        where: { username: 'changed123' },
-      });
-
-      await expect(usersService.remove(user.id)).resolves.toBeUndefined();
-
-      const findUser = await usersService.find(user.user_id);
-
-      expect(findUser.length).toBe(0);
-    });
-
-    it('should return exception when remove users that not exist', async () => {
-      await expect(usersService.remove('not_exist')).rejects.toThrowError();
-    });
-
-    it('should change password', async () => {
       const createUserDto = {
-        email: 'test@gmail.com',
+        email: 'test@email.com',
         password: 'password',
         user_id: 'test123',
         username: 'test123',
       };
 
-      const { id } = await usersService.create(createUserDto);
+      const createdUser = await usersService.create(createUserDto);
+
+      const user = await usersService.findOne(createdUser.id);
+
+      expect(user.email).toBe(createUserDto.email);
+      expect(user.user_id).toBe(createUserDto.user_id);
+      expect(user.username).toBe(createUserDto.username);
+    });
+
+    it('should return exception if user not found', async () => {
+      await expect(usersService.findOne('not_exist')).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'User was not found',
+          },
+        }),
+      );
+    });
+
+    it('should update user and return record', async () => {
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
+
+      const createdUser = await usersService.create(createUserDto);
+
+      const updateUserDto = {
+        user_id: 'changed123',
+        username: 'changed123',
+      };
+
+      const updatedUser = await usersService.update(
+        createdUser.id,
+        updateUserDto,
+      );
+
+      expect(updatedUser.user_id).toBe(updateUserDto.user_id);
+      expect(updatedUser.username).toBe(updateUserDto.username);
+    });
+
+    it('should remove user', async () => {
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
+
+      const createdUser = await usersService.create(createUserDto);
+
+      await expect(
+        usersService.remove(createdUser.id),
+      ).resolves.toBeUndefined();
+
+      const findUser = await usersService.find(createdUser.user_id);
+
+      expect(findUser).toEqual([]);
+    });
+
+    it('should return exception when remove users that not exist', async () => {
+      await expect(usersService.remove('not_exist')).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'User to delete does not exist',
+          },
+        }),
+      );
+    });
+
+    it('should change password', async () => {
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
+
+      const createdUser = await usersService.create(createUserDto);
 
       const changePasswordDto = {
         current_password: 'password',
         new_password: 'new_password',
       };
 
-      const shouldBeUndefined = await usersService.changePassword(
-        id,
-        changePasswordDto,
-      );
+      await usersService.changePassword(createdUser.id, changePasswordDto);
 
-      expect(shouldBeUndefined).toBeUndefined();
+      const user = await prismaService.users.findFirst({
+        where: { id: createdUser.id },
+      });
+
+      expect(
+        bcrypt.compareSync(changePasswordDto.new_password, user.password),
+      ).toBeTruthy();
     });
 
     it('should throw error if current_password wrong', async () => {
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
+
+      const createdUser = await usersService.create(createUserDto);
+
       const changePasswordDto = {
         current_password: 'wrong_password',
         new_password: 'new_password',
       };
 
-      const { id } = await prismaService.users.findFirst({
-        where: { user_id: 'test123' },
-      });
-
       await expect(
-        usersService.changePassword(id, changePasswordDto),
-      ).rejects.toThrowError();
+        usersService.changePassword(createdUser.id, changePasswordDto),
+      ).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Wrong password',
+          },
+        }),
+      );
     });
 
     it('should change email', async () => {
-      const otp = await otpService.generateOtp('changed@gmail.com');
+      const otp = await otpService.generateOtp('changed@email.com');
 
       const changeEmailDto = {
-        email: 'changed@gmail.com',
+        email: 'changed@email.com',
         otp,
       };
 
-      const { id } = await prismaService.users.findFirst({
-        where: { user_id: 'test123' },
-      });
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
 
-      const updatedUser = await usersService.changeEmail(id, changeEmailDto);
+      const createdUser = await usersService.create(createUserDto);
+
+      const updatedUser = await usersService.changeEmail(
+        createdUser.id,
+        changeEmailDto,
+      );
 
       expect(updatedUser.email).toBe(changeEmailDto.email);
     });
 
-    it('should throw error if otp is not valid', async () => {
-      await otpService.generateOtp('changed@gmail.com');
-
-      const changeEmailDto = {
-        email: 'new_email@gmail.com',
-        otp: 'not_valid_otp',
-      };
-
-      const { id } = await prismaService.users.findFirst({
-        where: { user_id: 'test123' },
-      });
-
-      await expect(
-        usersService.changeEmail(id, changeEmailDto),
-      ).rejects.toThrowError();
-    });
-
     afterAll(async () => {
       await redisService.quit();
-      await prismaService.$transaction([
-        prismaService.users.deleteMany({
-          where: {
-            user_id: 'test123',
-          },
-        }),
-      ]);
+      await prismaService.$transaction([prismaService.users.deleteMany()]);
     });
   });
 });

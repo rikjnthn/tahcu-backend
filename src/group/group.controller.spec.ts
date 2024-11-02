@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import { GroupService } from './group.service';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { UsersModule } from 'src/users/users.module';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { GroupController } from './group.controller';
 
 describe('GroupController', () => {
@@ -25,6 +25,10 @@ describe('GroupController', () => {
       prismaService = new PrismaService();
       groupService = new GroupService(prismaService);
       groupController = new GroupController(groupService);
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
     });
 
     it('should be defined', () => {
@@ -83,69 +87,18 @@ describe('GroupController', () => {
         description: 'group_description',
         members: [user_1, user_2],
       };
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'The users to add to the group was not found',
+        },
+      });
 
-      jest.spyOn(groupController, 'create').mockRejectedValue(new Error());
+      jest.spyOn(groupController, 'create').mockRejectedValue(error);
 
       await expect(
         groupController.create(createGroupDto, 'not_exist_user_id'),
-      ).rejects.toThrowError();
-    });
-
-    it('should find group', async () => {
-      const foundGroupMock = {
-        id: 'group_id',
-        name: 'group_name',
-        description: 'group_description',
-        created_at: new Date(),
-        admin_id: user_1,
-        created_by_id: user_1,
-        group_membership: [
-          {
-            id: 'membership_id_1',
-            user: {
-              username: 'username_1',
-            },
-            user_id: user_1,
-            group_id,
-            joined_at: new Date(),
-          },
-          {
-            id: 'membership_id_2',
-            user: {
-              username: 'username_2',
-            },
-            user_id: user_2,
-            group_id,
-            joined_at: new Date(),
-          },
-          {
-            id: 'membership_id_3',
-            user: {
-              username: 'username_3',
-            },
-            user_id: user_3,
-            group_id,
-            joined_at: new Date(),
-          },
-        ],
-      };
-
-      jest.spyOn(groupController, 'findOne').mockResolvedValue(foundGroupMock);
-
-      const group = await groupController.findOne('group_id');
-
-      expect(groupController.findOne).toBeCalled();
-      expect(groupController.findOne).toBeCalledWith('group_id');
-
-      expect(group).toEqual(foundGroupMock);
-    });
-
-    it('should return exception if group is not found', async () => {
-      jest.spyOn(groupController, 'findOne').mockRejectedValue(new Error());
-
-      await expect(
-        groupController.findOne('not_exist_group_id'),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(error);
     });
 
     it('should add(create) group membership and return record', async () => {
@@ -202,11 +155,18 @@ describe('GroupController', () => {
         members: ['not_exist_user_id'],
       };
 
-      jest.spyOn(groupController, 'addMembers').mockRejectedValue(new Error());
+      const error = new BadRequestException({
+        err: {
+          code: 'NOT_FOUND',
+          message: 'The members to add to the group were not found',
+        },
+      });
+
+      jest.spyOn(groupController, 'addMembers').mockRejectedValue(error);
 
       await expect(
         groupController.addMembers(addMemberDto, user_1),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(error);
     });
 
     it('should return exception if a group not exist when adding member', async () => {
@@ -215,13 +175,20 @@ describe('GroupController', () => {
         members: ['user_4'],
       };
 
-      jest.spyOn(groupController, 'addMembers').mockRejectedValue(new Error());
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Group was not found',
+        },
+      });
+
+      jest.spyOn(groupController, 'addMembers').mockRejectedValue(error);
 
       const differentGroupAdmin = 'user_5';
 
       await expect(
         groupController.addMembers(addMemberDto, differentGroupAdmin),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(error);
     });
 
     it('should return exception if a non admin adding member', async () => {
@@ -230,11 +197,82 @@ describe('GroupController', () => {
         members: ['user_4'],
       };
 
-      jest.spyOn(groupController, 'addMembers').mockRejectedValue(new Error());
+      const error = new UnauthorizedException({
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'You were not permitted to edit members in this group',
+        },
+      });
+
+      jest.spyOn(groupController, 'addMembers').mockRejectedValue(error);
 
       await expect(
         groupController.addMembers(addMemberDto, 'not_admin_user_id'),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(error);
+    });
+
+    it('should find group', async () => {
+      const foundGroupMock = {
+        id: 'group_id',
+        name: 'group_name',
+        description: 'group_description',
+        created_at: new Date(),
+        admin_id: user_1,
+        created_by_id: user_1,
+        group_membership: [
+          {
+            id: 'membership_id_1',
+            user: {
+              username: 'username_1',
+            },
+            user_id: user_1,
+            group_id,
+            joined_at: new Date(),
+          },
+          {
+            id: 'membership_id_2',
+            user: {
+              username: 'username_2',
+            },
+            user_id: user_2,
+            group_id,
+            joined_at: new Date(),
+          },
+          {
+            id: 'membership_id_3',
+            user: {
+              username: 'username_3',
+            },
+            user_id: user_3,
+            group_id,
+            joined_at: new Date(),
+          },
+        ],
+      };
+
+      jest.spyOn(groupController, 'findOne').mockResolvedValue(foundGroupMock);
+
+      const group = await groupController.findOne('group_id');
+
+      expect(groupController.findOne).toBeCalled();
+      expect(groupController.findOne).toBeCalledWith('group_id');
+
+      expect(group).toEqual(foundGroupMock);
+    });
+
+    it('should return exception if group is not found', async () => {
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Group was not found',
+        },
+      });
+
+      jest.spyOn(groupController, 'findOne').mockRejectedValue(error);
+
+      await expect(
+        groupController.findOne('not_exist_group_id'),
+      ).rejects.toThrow(error);
     });
 
     it('should find groups', async () => {
@@ -280,10 +318,10 @@ describe('GroupController', () => {
 
       jest.spyOn(groupController, 'findAll').mockResolvedValue(foundGroupMock);
 
-      const createdGroup = await groupController.findAll(user_1);
+      const createdGroup = await groupController.findAll(user_1, 0);
 
       expect(groupController.findAll).toBeCalled();
-      expect(groupController.findAll).toBeCalledWith(user_1);
+      expect(groupController.findAll).toBeCalledWith(user_1, 0);
 
       expect(createdGroup).toEqual(foundGroupMock);
     });
@@ -291,9 +329,9 @@ describe('GroupController', () => {
     it('should return empty array if user not joined any group', async () => {
       jest.spyOn(groupController, 'findAll').mockResolvedValue([]);
 
-      await expect(groupController.findAll('no_group_user')).resolves.toEqual(
-        [],
-      );
+      await expect(
+        groupController.findAll('no_group_user', 0),
+      ).resolves.toEqual([]);
     });
 
     it('should update group and return record', async () => {
@@ -338,11 +376,18 @@ describe('GroupController', () => {
         new_admin: 'not_exist_user_id',
       };
 
-      jest.spyOn(groupController, 'updateGroup').mockRejectedValue(new Error());
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Admin id was not found',
+        },
+      });
+
+      jest.spyOn(groupController, 'updateGroup').mockRejectedValue(error);
 
       await expect(
         groupController.updateGroup('group_id', updateGroupDto, user_1),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(error);
     });
 
     it('should return exception if non admin trying to update group', async () => {
@@ -352,9 +397,14 @@ describe('GroupController', () => {
         new_admin: user_3,
       };
 
-      jest
-        .spyOn(groupController, 'updateGroup')
-        .mockRejectedValue(new UnauthorizedException());
+      const error = new UnauthorizedException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'You were not permitted to edit this group',
+        },
+      });
+
+      jest.spyOn(groupController, 'updateGroup').mockRejectedValue(error);
 
       await expect(
         groupController.updateGroup(
@@ -362,7 +412,7 @@ describe('GroupController', () => {
           updateGroupDto,
           'not_group_admin_id',
         ),
-      ).rejects.toThrowError(new UnauthorizedException());
+      ).rejects.toThrow(error);
     });
 
     it('should return exception if group not found when update group', async () => {
@@ -372,7 +422,14 @@ describe('GroupController', () => {
         new_admin: user_3,
       };
 
-      jest.spyOn(groupController, 'updateGroup').mockRejectedValue(new Error());
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Group was not found',
+        },
+      });
+
+      jest.spyOn(groupController, 'updateGroup').mockRejectedValue(error);
 
       await expect(
         groupController.updateGroup(
@@ -380,7 +437,7 @@ describe('GroupController', () => {
           updateGroupDto,
           user_2,
         ),
-      ).rejects.toThrowError(new Error());
+      ).rejects.toThrow(error);
     });
 
     it('should delete group', async () => {
@@ -405,13 +462,18 @@ describe('GroupController', () => {
     });
 
     it('should return exception if group not found when trying to delete group', async () => {
-      jest
-        .spyOn(groupController, 'remove')
-        .mockRejectedValue(new NotFoundException());
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Group was not found',
+        },
+      });
+
+      jest.spyOn(groupController, 'remove').mockRejectedValue(error);
 
       await expect(
         groupController.remove('not_exist_group_id', user_2),
-      ).rejects.toThrowError(new NotFoundException());
+      ).rejects.toThrowError(error);
     });
 
     it('should delete group member', async () => {
@@ -459,13 +521,18 @@ describe('GroupController', () => {
         members: [user_1],
       };
 
-      jest
-        .spyOn(groupController, 'deleteMembers')
-        .mockRejectedValue(new UnauthorizedException());
+      const error = new UnauthorizedException({
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'You were not permitted to edit member this group',
+        },
+      });
+
+      jest.spyOn(groupController, 'deleteMembers').mockRejectedValue(error);
 
       await expect(
         groupController.deleteMembers(deleteMemberDto, 'not_admin_id'),
-      ).rejects.toThrowError(new UnauthorizedException());
+      ).rejects.toThrow(error);
     });
 
     it('should exit from group', async () => {
@@ -488,23 +555,24 @@ describe('GroupController', () => {
     });
 
     it('should return exception if group not found when trying to exit from group', async () => {
-      jest.spyOn(groupController, 'exitGroup').mockRejectedValue(new Error());
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Group does not found',
+        },
+      });
+
+      jest.spyOn(groupController, 'exitGroup').mockRejectedValue(error);
 
       await expect(
         groupController.exitGroup('not_exist_group_id', user_1, user_2),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(error);
     });
   });
 
   describe('Integration Testing', () => {
     let prismaService: PrismaService;
     let groupController: GroupController;
-
-    const user_1 = 'user_1';
-    const user_2 = 'user_2';
-    const user_3 = 'user_3';
-
-    let group_id: string;
 
     beforeAll(async () => {
       const module: TestingModule = await Test.createTestingModule({
@@ -529,39 +597,43 @@ describe('GroupController', () => {
         controllers: [GroupController],
       }).compile();
 
-      /**
-       * I don't know why I have to use this.
-       * If discard this, jest will not exit after running the test.
-       */
       module.close();
 
-      prismaService = module.get<PrismaService>(PrismaService);
-      groupController = module.get<GroupController>(GroupController);
+      prismaService = module.get(PrismaService);
+      groupController = module.get(GroupController);
     });
 
-    beforeAll(async () => {
+    beforeEach(async () => {
       await prismaService.users.createMany({
         data: [
           {
             email: 'user_1@gmail.com',
             password: 'password',
-            user_id: user_1,
+            user_id: 'user_id_1',
             username: 'username_1',
           },
           {
             email: 'user_2@gmail.com',
             password: 'password',
-            user_id: user_2,
+            user_id: 'user_id_2',
             username: 'username_2',
           },
           {
             email: 'user_3@gmail.com',
             password: 'password',
-            user_id: user_3,
+            user_id: 'user_id_3',
             username: 'username_3',
           },
         ],
       });
+    });
+
+    afterEach(async () => {
+      await prismaService.$transaction([
+        prismaService.users.deleteMany(),
+        prismaService.groupMembership.deleteMany(),
+        prismaService.group.deleteMany(),
+      ]);
     });
 
     it('should be defined', () => {
@@ -572,144 +644,252 @@ describe('GroupController', () => {
       const createGroupDto = {
         name: 'group_name',
         description: 'group_description',
-        members: [user_1, user_2],
+        members: ['user_id_1', 'user_id_2'],
       };
 
-      const createdGroup = await groupController.create(createGroupDto, user_1);
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
 
       expect(createdGroup.name).toBe(createGroupDto.name);
-      expect(createdGroup.admin_id).toBe(user_1);
-      expect(createdGroup.created_by_id).toBe(user_1);
+      expect(createdGroup.admin_id).toBe('user_id_1');
+      expect(createdGroup.created_by_id).toBe('user_id_1');
       expect(createdGroup.description).toBe(createGroupDto.description);
 
-      expect(createdGroup.group_membership[0].user_id).toBe(user_1);
-      expect(createdGroup.group_membership[1].user_id).toBe(user_2);
-
-      group_id = createdGroup.id;
+      expect(createdGroup.group_membership[0].user_id).toBe('user_id_1');
+      expect(createdGroup.group_membership[1].user_id).toBe('user_id_2');
     });
 
     it('should return exception if user that create group not exist', async () => {
       const createGroupDto = {
-        name: 'group_name_2',
+        name: 'group_name',
         description: 'group_description',
-        members: [user_1, user_2],
+        members: ['user_id_1', 'user_id_2'],
       };
 
       await expect(
         groupController.create(createGroupDto, 'not_exist_user_id'),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'The users to add to the group was not found',
+          },
+        }),
+      );
     });
 
     it('should add(create) group membership and return record', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       const addMmeberDto = {
-        group_id,
-        members: [user_3],
+        group_id: createdGroup.id,
+        members: ['user_id_3'],
       };
 
       const addedMembers = await groupController.addMembers(
         addMmeberDto,
-        user_1,
+        'user_id_1',
       );
 
       const user_3_membership = addedMembers.find((member) => {
-        return member.user_id === user_3;
+        return member.user_id === 'user_id_3';
       });
 
-      expect(user_3_membership.group_id).toBe(group_id);
-      expect(user_3_membership.user_id).toBe(user_3);
+      expect(user_3_membership.group_id).toBe(addMmeberDto.group_id);
+      expect(user_3_membership.user_id).toBe('user_id_3');
     });
 
     it('should return exception if user that need to be add to a group not exist', async () => {
-      const addMmeberDto = {
-        group_id,
-        members: ['not_exist_user_id'],
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
       };
 
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
       await expect(
-        groupController.addMembers(addMmeberDto, user_1),
-      ).rejects.toThrowError();
+        groupController.addMembers(
+          { group_id: createdGroup.id, members: ['not_exist_user_id'] },
+          'user_id_1',
+        ),
+      ).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'The user to add to the group was not found',
+          },
+        }),
+      );
     });
 
     it('should return exception if a group not exist when adding member', async () => {
       const addMmeberDto = {
         group_id: 'not_exist_group_id',
-        members: ['user_4'],
+        members: ['user_id_3'],
       };
 
       await expect(
-        groupController.addMembers(addMmeberDto, user_1),
-      ).rejects.toThrowError();
+        groupController.addMembers(addMmeberDto, 'user_id_1'),
+      ).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Group was not found',
+          },
+        }),
+      );
     });
 
-    it('should return exception if non_admin adding member', async () => {
+    it('should return exception if non admin adding member', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       const addMmeberDto = {
-        group_id,
-        members: ['user_4'],
+        group_id: createdGroup.id,
+        members: ['user_id_3'],
       };
 
       await expect(
         groupController.addMembers(addMmeberDto, 'not_admin_id'),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(
+        new UnauthorizedException({
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'You were not permitted to edit members in this group',
+          },
+        }),
+      );
     });
 
     it('should find group', async () => {
-      const group = await groupController.findOne(group_id);
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
+      const group = await groupController.findOne(createdGroup.id);
 
       expect(group.name).toEqual('group_name');
       expect(group.description).toEqual('group_description');
-      expect(group.admin_id).toEqual(user_1);
-      expect(group.created_by_id).toEqual(user_1);
+      expect(group.admin_id).toEqual('user_id_1');
+      expect(group.created_by_id).toEqual('user_id_1');
     });
 
     it('should return exception if group is not found', async () => {
-      jest.spyOn(groupController, 'findOne').mockRejectedValue(new Error());
-
       await expect(
         groupController.findOne('not_exist_group_id'),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Group was not found',
+          },
+        }),
+      );
     });
 
     it('should find groups', async () => {
-      const [createdGroup] = await groupController.findAll(user_1);
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
 
-      expect(createdGroup.name).toEqual('group_name');
-      expect(createdGroup.description).toEqual('group_description');
-      expect(createdGroup.admin_id).toEqual(user_1);
-      expect(createdGroup.created_by_id).toEqual(user_1);
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
 
-      const members = [user_1, user_2, user_3];
+      const [group] = await groupController.findAll('user_id_1', 0);
 
-      createdGroup.group_membership.forEach(({ user_id, group_id }, idx) => {
+      expect(group.name).toEqual('group_name');
+      expect(group.description).toEqual('group_description');
+      expect(group.admin_id).toEqual('user_id_1');
+      expect(group.created_by_id).toEqual('user_id_1');
+
+      const members = ['user_id_1', 'user_id_2'];
+
+      group.group_membership.forEach(({ user_id, group_id }, idx) => {
         expect(user_id).toBe(members[idx]);
         expect(group_id).toBe(createdGroup.id);
       });
     });
 
     it('should return empty array if user not joined any group', async () => {
-      await expect(groupController.findAll('user_5')).resolves.toEqual([]);
+      await expect(groupController.findAll('user_5', 0)).resolves.toEqual([]);
     });
 
     it('should update group and return record', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       const updateGroupDto = {
         description: 'new_description',
         name: 'new group name',
-        new_admin: user_2,
+        new_admin: 'user_id_2',
       };
 
       const updatedGroup = await groupController.updateGroup(
-        group_id,
+        createdGroup.id,
         updateGroupDto,
-        user_1,
+        'user_id_1',
       );
 
-      expect(updatedGroup.id).toEqual(group_id);
-      expect(updatedGroup.admin_id).toEqual(user_2);
-      expect(updatedGroup.created_by_id).toEqual(user_1);
+      expect(updatedGroup.id).toEqual(createdGroup.id);
+      expect(updatedGroup.admin_id).toEqual('user_id_2');
+      expect(updatedGroup.created_by_id).toEqual('user_id_1');
       expect(updatedGroup.description).toEqual(updateGroupDto.description);
       expect(updatedGroup.name).toEqual(updateGroupDto.name);
     });
 
     it('should return exception if group admin changed to non exist user', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       const updateGroupDto = {
         description: 'change description',
         name: 'change group name',
@@ -717,55 +897,117 @@ describe('GroupController', () => {
       };
 
       await expect(
-        groupController.updateGroup(group_id, updateGroupDto, user_2),
-      ).rejects.toThrowError();
+        groupController.updateGroup(
+          createdGroup.id,
+          updateGroupDto,
+          'user_id_1',
+        ),
+      ).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Admin id was not found',
+          },
+        }),
+      );
     });
 
     it('should return exception if non admin trying to update group', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       const updateGroupDto = {
         description: 'new description',
         name: 'group name',
       };
 
       await expect(
-        groupController.updateGroup(group_id, updateGroupDto, user_1),
-      ).rejects.toThrowError();
+        groupController.updateGroup(
+          createdGroup.id,
+          updateGroupDto,
+          'user_id_2',
+        ),
+      ).rejects.toThrow(
+        new UnauthorizedException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'You were not permitted to edit this group',
+          },
+        }),
+      );
     });
 
     it('should return exception if group not found when update group', async () => {
       const updateGroupDto = {
         description: 'desc',
         name: 'new group name 2',
-        new_admin: user_3,
+        new_admin: 'user_id_3',
       };
 
       await expect(
         groupController.updateGroup(
           'not_exist_group_id',
           updateGroupDto,
-          user_2,
+          'user_id_1',
         ),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Group was not found',
+          },
+        }),
+      );
     });
 
     it('should return exception if non admin trying to delete group', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       await expect(
-        groupController.remove(group_id, user_1),
+        groupController.remove(createdGroup.id, 'user_id_2'),
       ).rejects.toThrowError();
     });
 
     it('should delete group member', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2', 'user_id_3'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       const deleteMemberDto = {
-        group_id,
-        members: [user_3],
+        group_id: createdGroup.id,
+        members: ['user_id_3'],
       };
 
       const updatedGroup = await groupController.deleteMembers(
         deleteMemberDto,
-        user_2,
+        'user_id_1',
       );
 
-      const members = [user_1, user_2];
+      const members = ['user_id_1', 'user_id_2'];
 
       updatedGroup.forEach(({ group_id, user_id }, idx) => {
         expect(group_id).toBe(group_id);
@@ -773,50 +1015,101 @@ describe('GroupController', () => {
       });
     });
 
-    it('should return exception non admin trying to delete group member', async () => {
+    it('should return exception when non admin trying to delete group member', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       const deleteMemberDto = {
-        group_id,
-        members: [user_2],
+        group_id: createdGroup.id,
+        members: ['user_id_1'],
       };
 
       await expect(
-        groupController.deleteMembers(deleteMemberDto, user_1),
-      ).rejects.toThrowError();
+        groupController.deleteMembers(deleteMemberDto, 'user_id_2'),
+      ).rejects.toThrow(
+        new UnauthorizedException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'You were not permitted to edit this group',
+          },
+        }),
+      );
     });
 
     it('should exit from group', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       await expect(
-        groupController.exitGroup(group_id, user_1, user_2),
+        groupController.exitGroup(createdGroup.id, 'user_id_2', 'user_id_1'),
       ).resolves.toBeUndefined();
 
-      const shouldBeNull = await prismaService.groupMembership.findFirst({
-        where: { group_id, user_id: user_2 },
-      });
-
-      expect(shouldBeNull).toBeNull();
+      await expect(
+        prismaService.groupMembership.findFirst({
+          where: { group_id: createdGroup.id, user_id: 'user_id_1' },
+        }),
+      ).resolves.toBeNull();
     });
 
     it('should return exception if group not found when trying to exit from group', async () => {
       await expect(
-        groupController.exitGroup('not_exist_group_id', user_1, user_2),
-      ).rejects.toThrowError();
+        groupController.exitGroup(
+          'not_exist_group_id',
+          'user_id_1',
+          'user_id_2',
+        ),
+      ).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Group does not found',
+          },
+        }),
+      );
     });
 
     it('should delete group', async () => {
+      const createGroupDto = {
+        name: 'group_name',
+        description: 'group_description',
+        members: ['user_id_1', 'user_id_2'],
+      };
+
+      const createdGroup = await groupController.create(
+        createGroupDto,
+        'user_id_1',
+      );
+
       await expect(
-        groupController.remove(group_id, user_1),
+        groupController.remove(createdGroup.id, 'user_id_1'),
       ).resolves.toBeUndefined();
 
       await expect(
         prismaService.group.findFirst({
-          where: { id: group_id },
+          where: { id: createdGroup.id },
         }),
       ).resolves.toBeNull();
     });
 
     it('should return exception if group not found when trying to delete group', async () => {
       await expect(
-        groupController.remove('not_exist_group_id', user_2),
+        groupController.remove('not_exist_group_id', 'user_id_1'),
       ).rejects.toThrowError();
     });
 

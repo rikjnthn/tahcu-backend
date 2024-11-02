@@ -1,8 +1,18 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Redis } from 'ioredis';
 
 @Injectable()
-export class RedisService extends Redis implements OnModuleDestroy {
+export class RedisService
+  extends Redis
+  implements OnModuleDestroy, OnModuleInit
+{
+  private readonly logger = new Logger(RedisService.name);
+
   constructor() {
     super({
       port: parseInt(process.env.DRAGONFLY_PORT),
@@ -10,7 +20,13 @@ export class RedisService extends Redis implements OnModuleDestroy {
     });
   }
 
+  onModuleInit() {
+    this.logger.log('Initialized redis connection');
+  }
+
   async onModuleDestroy(): Promise<void> {
+    this.logger.log('Close redis connection');
+
     await this.quit();
   }
 }

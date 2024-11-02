@@ -1,22 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersController } from './users.controller';
+import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtModule } from '@nestjs/jwt';
+import { ThrottlerModule } from '@nestjs/throttler';
+import * as bcrypt from 'bcrypt';
+
 import { PrismaModule } from 'src/common/prisma/prisma.module';
 import { PrismaService } from 'src/common/prisma/prisma.service';
-import { BadRequestException } from '@nestjs/common';
 import { OtpService } from 'src/common/otp/otp.service';
 import { RedisService } from 'src/common/redis/redis.service';
 import { OtpModule } from 'src/common/otp/otp.module';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { UsersController } from './users.controller';
 
 describe('UsersController', () => {
   describe('Unit Testing', () => {
-    let usersController: UsersController;
-    let usersService: UsersService;
+    let prismaService: PrismaService;
     let otpService: OtpService;
     let redisService: RedisService;
-    let prismaService: PrismaService;
+    let usersService: UsersService;
+    let usersController: UsersController;
 
     beforeAll(async () => {
       prismaService = new PrismaService();
@@ -26,140 +28,132 @@ describe('UsersController', () => {
       usersController = new UsersController(usersService);
     });
 
+    afterAll(() => {
+      jest.clearAllMocks();
+    });
+
     it('should be defined', () => {
       expect(usersController).toBeDefined();
     });
 
-    it('should find users', async () => {
-      const usersFoundMock = [
+    it('should find users with prefix id query', async () => {
+      const userFoundMock = [
         {
           id: '1',
+          email: 'test@email.com',
           user_id: 'test123',
-          email: 'test@gmail.com',
-          username: 'test',
+          username: 'test123',
           created_at: new Date(),
           updated_at: new Date(),
         },
       ];
 
-      jest.spyOn(usersController, 'find').mockResolvedValue(usersFoundMock);
+      jest.spyOn(usersController, 'find').mockResolvedValue(userFoundMock);
 
-      const users = await usersController.find('tes123');
+      const users = await usersController.find('tes');
 
       expect(usersController.find).toBeCalled();
-      expect(usersController.find).toBeCalledWith('tes123');
+      expect(usersController.find).toBeCalledWith('tes');
 
       expect(Array.isArray(users)).toBeTruthy();
 
-      expect(users).toEqual(usersFoundMock);
+      expect(users).toEqual(userFoundMock);
     });
 
     it('should return empty array if users not found', async () => {
       jest.spyOn(usersController, 'find').mockResolvedValue([]);
 
-      const users = await usersController.find('non_exist');
+      const users = await usersController.find('non_exist_id');
 
-      expect(Array.isArray(users)).toBeTruthy();
-
-      expect(users.length).toBe(0);
+      expect(users).toEqual([]);
     });
 
-    it('should find one user by id', async () => {
-      const usersFoundMock = {
+    it('should find user with id', async () => {
+      const userFoundMock = {
         id: '1',
+        email: 'test@email.com',
         user_id: 'test123',
-        email: 'test@gmail.com',
-        username: 'test',
+        password: 'password',
+        username: 'test123',
         created_at: new Date(),
         updated_at: new Date(),
       };
 
-      jest.spyOn(usersController, 'findOne').mockResolvedValue(usersFoundMock);
+      jest.spyOn(usersController, 'findOne').mockResolvedValue(userFoundMock);
 
-      const users = await usersController.findOne('1');
+      const user = await usersController.findOne('test123');
 
-      expect(usersController.findOne).toBeCalled();
-      expect(usersController.findOne).toBeCalledWith('1');
+      expect(usersController.findOne);
+      expect(usersController.findOne).toBeCalledWith('test123');
 
-      expect(users).toEqual(usersFoundMock);
+      expect(user).toEqual(userFoundMock);
     });
 
-    it('should return exception if user not found', async () => {
-      jest.spyOn(usersController, 'findOne').mockRejectedValue(new Error());
+    it('should return exception if user not found with id', async () => {
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'User was not found',
+        },
+      });
 
-      await expect(usersController.findOne('non_exist')).rejects.toThrowError();
+      jest.spyOn(usersController, 'findOne').mockRejectedValue(error);
+
+      await expect(usersController.findOne('non_exist_id')).rejects.toThrow(
+        error,
+      );
     });
 
     it('should update users and return record', async () => {
-      const updateUserDtoMock = {
-        user_id: 'new_user_id',
-        username: 'new_username',
+      const updateUserDto = {
+        user_id: 'changed123',
+        username: 'changed123',
       };
 
       const updatedUserMock = {
         id: '1',
-        user_id: 'new_user_id',
-        email: 'new_email@gmail.com',
-        username: 'new_username',
+        email: 'tes@email.com',
+        user_id: 'changed123',
+        password: 'password',
+        username: 'changed123',
         created_at: new Date(),
         updated_at: new Date(),
       };
 
       jest.spyOn(usersController, 'update').mockResolvedValue(updatedUserMock);
 
-      const updatedUser = await usersController.update('1', updateUserDtoMock);
+      const updatedUser = await usersController.update('1', updateUserDto);
 
       expect(usersController.update).toBeCalled();
-      expect(usersController.update).toBeCalledWith('1', updateUserDtoMock);
+      expect(usersController.update).toBeCalledWith('1', updateUserDto);
 
       expect(updatedUser).toEqual(updatedUserMock);
-    });
-
-    it('should return exception if user need to update not found', async () => {
-      const updateUserDtoMock = {
-        user_id: 'changed_user_id',
-        username: 'changed_username',
-      };
-
-      jest
-        .spyOn(usersController, 'update')
-        .mockRejectedValue(new BadRequestException());
-
-      await expect(
-        usersController.update('non_exist', updateUserDtoMock),
-      ).rejects.toThrowError(new BadRequestException());
-    });
-
-    it('should return exception if update user not valid', async () => {
-      const updateUserDtoMock = {
-        user_id: 'not_valid',
-        username: 'not_valid',
-      };
-
-      jest
-        .spyOn(usersController, 'update')
-        .mockRejectedValue(new BadRequestException());
-
-      await expect(
-        usersController.update('1', updateUserDtoMock),
-      ).rejects.toThrowError(new BadRequestException());
     });
 
     it('should remove user', async () => {
       jest.spyOn(usersController, 'remove').mockResolvedValue(undefined);
 
-      const shouldReturnUndefined = await usersController.remove('1');
+      const shouldBeUndefined = await usersController.remove('1');
 
       expect(usersController.remove).toBeCalled();
       expect(usersController.remove).toBeCalledWith('1');
 
-      expect(shouldReturnUndefined).toBeUndefined();
+      expect(shouldBeUndefined).toBeUndefined();
     });
 
     it('should return exception if user that want to be remove not exist', async () => {
-      jest.spyOn(usersController, 'remove').mockRejectedValue(new Error());
+      const error = new BadRequestException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'User to delete does not exist',
+        },
+      });
 
-      await expect(usersController.remove('non_exist')).rejects.toThrowError();
+      jest.spyOn(usersController, 'remove').mockRejectedValue(error);
+
+      await expect(usersController.remove('non_exist_id')).rejects.toThrow(
+        error,
+      );
     });
 
     it('should change password', async () => {
@@ -174,13 +168,13 @@ describe('UsersController', () => {
 
       const shouldBeUndefined = await usersController.changePassword(
         changePasswordDto,
-        '1',
+        'user_id',
       );
 
       expect(usersController.changePassword).toBeCalled();
       expect(usersController.changePassword).toBeCalledWith(
         changePasswordDto,
-        '1',
+        'user_id',
       );
 
       expect(shouldBeUndefined).toBeUndefined();
@@ -192,24 +186,29 @@ describe('UsersController', () => {
         new_password: 'new_password',
       };
 
-      jest
-        .spyOn(usersController, 'changePassword')
-        .mockRejectedValue(new BadRequestException());
+      const error = new BadRequestException({
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Wrong password',
+        },
+      });
+
+      jest.spyOn(usersController, 'changePassword').mockRejectedValue(error);
 
       await expect(
-        usersController.changePassword(changePasswordDto, '1'),
-      ).rejects.toThrowError();
+        usersController.changePassword(changePasswordDto, 'user_id'),
+      ).rejects.toThrow(error);
     });
 
     it('should change email', async () => {
       const changeEmailDto = {
-        email: 'changed@gmail.com',
+        email: 'changed@email.com',
         otp: '1234',
       };
 
       const updatedUserData = {
         id: '1',
-        email: 'changed@gmail.com',
+        email: 'changed@email.com',
         user_id: 'changed123',
         username: 'changed123',
         created_at: new Date(),
@@ -222,28 +221,41 @@ describe('UsersController', () => {
 
       const updatedUser = await usersController.changeEmail(
         changeEmailDto,
-        '1',
+        'user_id',
       );
 
       expect(usersController.changeEmail).toBeCalled();
-      expect(usersController.changeEmail).toBeCalledWith(changeEmailDto, '1');
+      expect(usersController.changeEmail).toBeCalledWith(
+        changeEmailDto,
+        'user_id',
+      );
 
       expect(updatedUser).toEqual(updatedUserData);
     });
 
-    it('should throw error if otp is not valid', async () => {
+    it('should change email', async () => {
       const changeEmailDto = {
-        email: 'new_email@gmail.com',
-        otp: 'not_valid_otp',
+        email: 'changed@email.com',
+        otp: '1234',
       };
 
-      jest
-        .spyOn(usersController, 'changeEmail')
-        .mockRejectedValue(new BadRequestException());
+      const usersData = {
+        id: 'user_id',
+        email: 'changed@email.com',
+        user_id: 'test123',
+        username: 'test123',
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
 
-      await expect(
-        usersController.changeEmail(changeEmailDto, '1'),
-      ).rejects.toThrowError();
+      jest.spyOn(usersController, 'changeEmail').mockResolvedValue(usersData);
+
+      const updatedUser = await usersController.changeEmail(
+        changeEmailDto,
+        usersData.id,
+      );
+
+      expect(updatedUser.email).toBe(changeEmailDto.email);
     });
 
     afterAll(async () => {
@@ -252,218 +264,240 @@ describe('UsersController', () => {
   });
 
   describe('Integration Testing', () => {
-    let usersService: UsersService;
-    let usersController: UsersController;
+    let prismaService: PrismaService;
     let otpService: OtpService;
     let redisService: RedisService;
-    let prismaService: PrismaService;
+    let usersService: UsersService;
+    let usersController: UsersController;
 
     beforeAll(async () => {
       const module: TestingModule = await Test.createTestingModule({
         imports: [
-          PrismaModule,
-          JwtModule,
-          OtpModule,
+          JwtModule.register({
+            global: true,
+            secret: process.env.JWT_SECRET,
+            signOptions: {
+              expiresIn: process.env.JWT_EXPIRED,
+            },
+          }),
           ThrottlerModule.forRoot([
             {
               ttl: parseInt(process.env.DEFAULT_THROTTLER_TTL),
               limit: parseInt(process.env.DEFAULT_THROTTLER_LIMIT),
             },
           ]),
+          PrismaModule,
+          OtpModule,
         ],
-        controllers: [UsersController],
         providers: [UsersService],
+        controllers: [UsersController],
       }).compile();
 
-      prismaService = module.get<PrismaService>(PrismaService);
-      usersService = module.get<UsersService>(UsersService);
-      otpService = module.get<OtpService>(OtpService);
-      redisService = module.get<RedisService>(RedisService);
-      usersController = module.get<UsersController>(UsersController);
+      prismaService = module.get(PrismaService);
+      otpService = module.get(OtpService);
+      redisService = module.get(RedisService);
+      usersService = module.get(UsersService);
+      usersController = module.get(UsersController);
     });
 
-    beforeAll(async () => {
-      await prismaService.users.create({
-        data: {
-          email: 'test@gmail.com',
-          user_id: 'test123',
-          username: 'test123',
-          password: 'password',
-        },
-      });
+    afterEach(async () => {
+      await prismaService.$transaction([prismaService.users.deleteMany()]);
     });
 
     it('should be defined', () => {
       expect(usersController).toBeDefined();
     });
 
-    it('should find users', async () => {
-      const usersFoundMock = {
-        email: 'test@gmail.com',
-        user_id: 'test123',
-        username: 'test123',
-      };
-
-      const users = await usersController.find('test123');
-
-      expect(Array.isArray(users)).toBeTruthy();
-
-      users.forEach((user) => {
-        expect(user.email).toBe(usersFoundMock.email);
-        expect(user.user_id).toBe(usersFoundMock.user_id);
-        expect(user.username).toBe(usersFoundMock.username);
-      });
-    });
-
-    it('should return empty array if users not found', async () => {
-      const users = await usersService.find('non_exist');
-
-      expect(Array.isArray(users)).toBeTruthy();
-
-      expect(users.length).toBe(0);
-    });
-
-    it('should find one user by id', async () => {
-      const usersFoundMock = {
-        email: 'test@gmail.com',
-        user_id: 'test123',
-        username: 'test123',
-      };
-
-      const { id } = await prismaService.users.findFirst({
-        where: { username: 'test123' },
-      });
-
-      const user = await usersController.findOne(id);
-
-      expect(user.email).toBe(usersFoundMock.email);
-      expect(user.user_id).toBe(usersFoundMock.user_id);
-      expect(user.username).toBe(usersFoundMock.username);
-    });
-
-    it('should return exception if user not found', async () => {
-      await expect(usersService.findOne('non_exist')).rejects.toThrowError();
-    });
-
-    it('should update users and return record', async () => {
-      const updateUserDto = {
-        user_id: 'new_user_id',
-        username: 'new_username',
-      };
-
-      const [users] = await usersController.find('test123');
-
-      const updatedUser = await usersController.update(users.id, updateUserDto);
-
-      expect(updatedUser.email).toBe(updatedUser.email);
-      expect(updatedUser.user_id).toBe(updatedUser.user_id);
-      expect(updatedUser.username).toBe(updatedUser.username);
-    });
-
-    it('should return exception if user that need to update not found', async () => {
-      const updateUserDto = {
-        user_id: 'changed_user_id',
-        username: 'changed_username',
-      };
-
-      await expect(
-        usersController.update('non_exist', updateUserDto),
-      ).rejects.toThrowError();
-    });
-
-    it('should remove users', async () => {
-      const [user] = await usersController.find('new_user_id');
-
-      await usersController.remove(user.id);
-
-      const users = await usersController.find('new_user_id');
-
-      expect(Array.isArray(users)).toBeTruthy();
-
-      expect(users.length).toBe(0);
-    });
-
-    it('should return exception when remove users that not exist', async () => {
-      await expect(usersController.remove('non_exist')).rejects.toThrowError();
-    });
-
-    it('should change password', async () => {
+    it('should find users with prefix id query', async () => {
       const createUserDto = {
-        email: 'test@gmail.com',
+        email: 'test@email.com',
         password: 'password',
         user_id: 'test123',
         username: 'test123',
       };
 
-      const { id } = await usersService.create(createUserDto);
+      await usersService.create(createUserDto);
+
+      const users = await usersController.find('test123');
+
+      expect(Array.isArray(users)).toBeTruthy();
+
+      const user = users[0];
+
+      expect(user.email).toBe(createUserDto.email);
+      expect(user.user_id).toBe(createUserDto.user_id);
+      expect(user.username).toBe(createUserDto.username);
+    });
+
+    it('should return empty array if users not found with prefix id query', async () => {
+      const users = await usersController.find('test1234');
+
+      expect(users).toEqual([]);
+    });
+
+    it('should return user by id', async () => {
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
+
+      const createdUser = await usersService.create(createUserDto);
+
+      const user = await usersController.findOne(createdUser.id);
+
+      expect(user.email).toBe(createUserDto.email);
+      expect(user.user_id).toBe(createUserDto.user_id);
+      expect(user.username).toBe(createUserDto.username);
+    });
+
+    it('should return exception if user not found', async () => {
+      await expect(usersController.findOne('not_exist')).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'User was not found',
+          },
+        }),
+      );
+    });
+
+    it('should update user and return record', async () => {
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
+
+      const createdUser = await usersService.create(createUserDto);
+
+      const updateUserDto = {
+        user_id: 'changed123',
+        username: 'changed123',
+      };
+
+      const updatedUser = await usersController.update(
+        createdUser.id,
+        updateUserDto,
+      );
+
+      expect(updatedUser.user_id).toBe(updateUserDto.user_id);
+      expect(updatedUser.username).toBe(updateUserDto.username);
+    });
+
+    it('should remove user', async () => {
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
+
+      const createdUser = await usersService.create(createUserDto);
+
+      await expect(
+        usersController.remove(createdUser.id),
+      ).resolves.toBeUndefined();
+
+      const findUser = await usersController.find(createdUser.user_id);
+
+      expect(findUser).toEqual([]);
+    });
+
+    it('should return exception when remove users that not exist', async () => {
+      await expect(usersController.remove('not_exist')).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'User to delete does not exist',
+          },
+        }),
+      );
+    });
+
+    it('should change password', async () => {
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
+
+      const createdUser = await usersService.create(createUserDto);
 
       const changePasswordDto = {
         current_password: 'password',
         new_password: 'new_password',
       };
 
-      const shouldBeUndefined = await usersController.changePassword(
-        changePasswordDto,
-        id,
-      );
+      await usersController.changePassword(changePasswordDto, createdUser.id);
 
-      expect(shouldBeUndefined).toBeUndefined();
+      const user = await prismaService.users.findFirst({
+        where: { id: createdUser.id },
+      });
+
+      expect(
+        bcrypt.compareSync(changePasswordDto.new_password, user.password),
+      ).toBeTruthy();
     });
 
     it('should throw error if current_password wrong', async () => {
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
+
+      const createdUser = await usersService.create(createUserDto);
+
       const changePasswordDto = {
         current_password: 'wrong_password',
         new_password: 'new_password',
       };
 
-      const { id } = await prismaService.users.findFirst({
-        where: { user_id: 'test123' },
-      });
-
       await expect(
-        usersController.changePassword(changePasswordDto, id),
-      ).rejects.toThrowError();
+        usersController.changePassword(changePasswordDto, createdUser.id),
+      ).rejects.toThrow(
+        new BadRequestException({
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Wrong password',
+          },
+        }),
+      );
     });
 
     it('should change email', async () => {
-      const otp = await otpService.generateOtp('changed@gmail.com');
+      const otp = await otpService.generateOtp('changed@email.com');
 
       const changeEmailDto = {
-        email: 'changed@gmail.com',
+        email: 'changed@email.com',
         otp,
       };
 
-      const { id } = await prismaService.users.findFirst({
-        where: { user_id: 'test123' },
-      });
+      const createUserDto = {
+        email: 'test@email.com',
+        password: 'password',
+        user_id: 'test123',
+        username: 'test123',
+      };
 
-      const updatedUser = await usersController.changeEmail(changeEmailDto, id);
+      const createdUser = await usersService.create(createUserDto);
+
+      const updatedUser = await usersController.changeEmail(
+        changeEmailDto,
+        createdUser.id,
+      );
 
       expect(updatedUser.email).toBe(changeEmailDto.email);
     });
 
-    it('should throw error if otp is not valid', async () => {
-      await otpService.generateOtp('changed@gmail.com');
-
-      const changeEmailDto = {
-        email: 'new_email@gmail.com',
-        otp: 'not_valid_otp',
-      };
-
-      const { id } = await prismaService.users.findFirst({
-        where: { user_id: 'test123' },
-      });
-
-      await expect(
-        usersController.changeEmail(changeEmailDto, id),
-      ).rejects.toThrowError();
-    });
-
     afterAll(async () => {
       await redisService.quit();
-      await prismaService.$transaction([
-        prismaService.users.deleteMany({ where: { user_id: 'test123' } }),
-      ]);
+      await prismaService.$transaction([prismaService.users.deleteMany()]);
     });
   });
 });

@@ -14,7 +14,7 @@ export class EmailService {
     'utf-8',
   );
 
-  constructor(private otpSerive: OtpService) {}
+  constructor(private otpService: OtpService) {}
 
   /**
    * Get html template and add dynamic data with handlebars
@@ -39,7 +39,7 @@ export class EmailService {
   async sendEmail(email: string): Promise<void> {
     this.logger.log('Start validating email');
 
-    const otp = await this.otpSerive.generateOtp(email);
+    const otp = await this.otpService.generateOtp(email);
 
     this.logger.log('Sending email');
 

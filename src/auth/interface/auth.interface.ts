@@ -7,4 +7,7 @@ export interface UserPayloadType {
   exp: number;
 }
 
-export type AuthReturnType = [string, string];
+export interface AuthReturnType {
+  tahcu_authToken: string;
+  CSRF_TOKEN: string;
+}

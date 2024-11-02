@@ -9,8 +9,10 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { seconds, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 import { GroupService } from './group.service';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -25,11 +27,9 @@ import {
   MemberType,
 } from './interface/group.interface';
 
-const oneSecondInMs = 1000;
-
 @Controller('group')
 @UseGuards(AuthGuard, ThrottlerGuard)
-@Throttle({ default: { ttl: oneSecondInMs, limit: 60 } })
+@Throttle({ default: { ttl: seconds(1), limit: 60 } })
 export class GroupController {
   constructor(private groupService: GroupService) {}
 
@@ -50,8 +50,9 @@ export class GroupController {
   @Get()
   async findAll(
     @User('user_id') userId: string,
+    @Query('skip', ParseIntPipe) skip: number,
   ): Promise<GroupWithMemberShipType[]> {
-    return await this.groupService.findAll(userId);
+    return await this.groupService.findAll(userId, skip);
   }
 
   @Patch('update-group/:groupId')

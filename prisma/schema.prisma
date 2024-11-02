@@ -31,8 +31,8 @@ model Group {
   name             String
   description      String?
   created_at       DateTime          @default(now()) @db.Timestamptz()
-  admin            Users              @relation("admin", fields: [admin_id], references: [user_id], onDelete: NoAction, map: "fk__Group__admin_id")
-  admin_id         String
+  admin            Users?              @relation("admin", fields: [admin_id], references: [user_id], onDelete: SetNull, map: "fk__Group__admin_id")
+  admin_id         String?
   created_by_id    String
   group_membership GroupMembership[]
   message          Message[]

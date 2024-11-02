@@ -9,7 +9,13 @@ import {
   Param,
   Get,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import {
+  hours,
+  minutes,
+  seconds,
+  Throttle,
+  ThrottlerGuard,
+} from '@nestjs/throttler';
 import { Response } from 'express';
 
 import { AuthService } from './auth.service';
@@ -17,11 +23,10 @@ import { SignUpDto } from './dto/sign-up.dto';
 import { LoginDto } from './dto/login.dto';
 import { User } from 'src/common/decorator/user.decorator';
 import { AuthGuard } from './auth.guard';
-import { UserPayloadType } from './interface/auth.interface';
+import { AuthReturnType, UserPayloadType } from './interface/auth.interface';
 import { SendOTPDto } from './dto/send-otp.dto';
-
-const oneSecondInMs = 1000;
-const thirtyMinutesInMs = 1_800_000;
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SendResetPasswordOTPDto } from './dto/send-reset-password-otp.dto';
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
@@ -50,7 +55,7 @@ export class AuthController {
     this.sentCookie(tokens, res);
   }
 
-  @Throttle({ default: { ttl: oneSecondInMs, limit: 60 } })
+  @Throttle({ default: { ttl: seconds(1), limit: 60 } })
   @Get('verify-tahcu-token/:token')
   async verifyTahcuToken(@Param('token') token: string): Promise<boolean> {
     return await this.authService.verifyTahcuToken(token);
@@ -67,14 +72,30 @@ export class AuthController {
     this.sentCookie(tokens, res);
   }
 
-  @Throttle({ default: { ttl: thirtyMinutesInMs, limit: 15 } })
+  @Throttle({ default: { ttl: minutes(30), limit: 15 } })
   @Post('send-otp')
   async sendOtp(@Body() sendOTPDto: SendOTPDto): Promise<void> {
     await this.authService.sendOtp(sendOTPDto);
   }
 
-  private sentCookie(tokens: [string, string], res: Response) {
-    const [tahcu_authToken, CSRF_TOKEN] = tokens;
+  @Throttle({ default: { ttl: minutes(30), limit: 15 } })
+  @Post('send-otp')
+  async sendResetPasswordOtp(
+    @Body() sendResetPasswordOTPDto: SendResetPasswordOTPDto,
+  ): Promise<void> {
+    await this.authService.sendResetPasswordOtp(sendResetPasswordOTPDto.email);
+  }
+
+  @Throttle({ default: { ttl: hours(12), limit: 5 } })
+  @Post('forget-password')
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ): Promise<void> {
+    await this.authService.resetPassword(resetPasswordDto);
+  }
+
+  private sentCookie(tokens: AuthReturnType, res: Response) {
+    const { tahcu_authToken, CSRF_TOKEN } = tokens;
 
     res.cookie('tahcu_auth', tahcu_authToken, {
       secure: true,

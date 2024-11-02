@@ -1,4 +1,2 @@
 #!/bin/sh
-
-npm run migrate:deploy
-npm run start:prod
+npm run migrate:deploy && npm run start:prod

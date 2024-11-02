@@ -1,10 +1,13 @@
 dist
 node_modules
+.git
 
 README.md
 
 .prettierrc 
 .eslintrc.js
+
+coverage
 
 .env.development
 .env.production

@@ -7,7 +7,7 @@ import {
   UseGuards,
   Param,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { hours, seconds, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -17,22 +17,19 @@ import { User } from 'src/common/decorator/user.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeEmailDto } from './dto/change-email.dto';
 
-const twelveHoursInMs = 43200000;
-const oneSecondInMs = 1000;
-
 @Controller('users')
 @UseGuards(AuthGuard, ThrottlerGuard)
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  @Throttle({ default: { limit: 10, ttl: oneSecondInMs } })
+  @Throttle({ default: { limit: 10, ttl: seconds(1) } })
   async findOne(@User('id') id: string): Promise<UserType> {
     return await this.usersService.findOne(id);
   }
 
   @Get(':userId')
-  @Throttle({ default: { limit: 10, ttl: oneSecondInMs } })
+  @Throttle({ default: { limit: 10, ttl: seconds(1) } })
   async find(@Param('userId') userId: string): Promise<UserType[]> {
     return await this.usersService.find(userId);
   }
@@ -51,7 +48,7 @@ export class UsersController {
   }
 
   @Patch('change-password')
-  @Throttle({ default: { limit: 3, ttl: twelveHoursInMs } })
+  @Throttle({ default: { limit: 3, ttl: hours(12) } })
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
     @User('id') id: string,
@@ -60,7 +57,7 @@ export class UsersController {
   }
 
   @Patch('change-email')
-  @Throttle({ default: { limit: 3, ttl: twelveHoursInMs } })
+  @Throttle({ default: { limit: 3, ttl: hours(12) } })
   async changeEmail(
     @Body() changeEmailDto: ChangeEmailDto,
     @User('id') id: string,

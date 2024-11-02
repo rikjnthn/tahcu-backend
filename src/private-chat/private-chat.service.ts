@@ -1,7 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { UpdatePrivateChatDto } from './dto/update-private-chat.dto';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { ContactType } from './interface/private-chat.interface';
 
@@ -60,6 +59,8 @@ export class PrivateChatService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2003') {
+          this.logger.warn('Friends id not found');
+
           throw new BadRequestException({
             error: {
               code: 'NOT_FOUND',
@@ -69,6 +70,8 @@ export class PrivateChatService {
         }
 
         if (error.code === 'P2002') {
+          this.logger.warn('Duplicate private chat');
+
           throw new BadRequestException({
             error: {
               code: 'DUPLICATE_VALUE',
@@ -89,76 +92,15 @@ export class PrivateChatService {
    *
    * @returns array of contacts data
    */
-  async findAll(user_id: string): Promise<ContactType[]> {
-    this.logger.log('Find the private chats');
+  async findAll(user_id: string, skip: number): Promise<ContactType[]> {
+    this.logger.log('Find private chats');
 
     return await this.prismaService.contact.findMany({
       where: { OR: [{ user_id }, { friends_id: user_id }] },
       include: this.contactInclude,
+      skip,
+      take: 50,
     });
-  }
-
-  /**
-   * Update contact data
-   *
-   * WARNING !!!
-   *
-   * Please, do not use this function first! It's need more
-   * further evaluation. :)
-   *
-   * @param id contact id
-   * @param updatePrivateChatDto dto to update contact
-   *
-   * @returns updated contact
-   */
-  async update(
-    id: string,
-    updatePrivateChatDto: UpdatePrivateChatDto,
-  ): Promise<ContactType> {
-    this.logger.log('Start updating the private chat');
-    if (updatePrivateChatDto.friends_id === updatePrivateChatDto.user_id) {
-      this.logger.warn('user id and friends id are the same');
-
-      throw new BadRequestException({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'User id and friends id should not be the same',
-        },
-      });
-    }
-
-    try {
-      const updatedChat = await this.prismaService.contact.update({
-        where: { id },
-        data: updatePrivateChatDto,
-        include: this.contactInclude,
-      });
-
-      this.logger.log('Private chat updated');
-
-      return updatedChat;
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2025') {
-          throw new BadRequestException({
-            error: {
-              code: 'NOT_FOUND',
-              message: 'Contact to update was not found',
-            },
-          });
-        }
-        if (error.code === 'P2003') {
-          throw new BadRequestException({
-            error: {
-              code: 'NOT_FOUND',
-              message: 'friends id wwas not found',
-            },
-          });
-        }
-      }
-
-      throw error;
-    }
   }
 
   /**
@@ -178,6 +120,8 @@ export class PrivateChatService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
+          this.logger.warn('Private chat not found');
+
           throw new BadRequestException({
             error: {
               code: 'NOT_FOUND',

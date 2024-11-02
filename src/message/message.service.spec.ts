@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { WsException } from '@nestjs/websockets';
+
 import { MessageService } from './message.service';
 import { PrismaService } from 'src/common/prisma/prisma.service';
 import { PrismaModule } from 'src/common/prisma/prisma.module';
@@ -11,6 +13,10 @@ describe('MessageService', () => {
     beforeAll(async () => {
       prismaService = new PrismaService();
       messageService = new MessageService(prismaService);
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
     });
 
     it('should be defined', () => {
@@ -91,11 +97,18 @@ describe('MessageService', () => {
         message: 'message',
       };
 
-      jest.spyOn(messageService, 'create').mockRejectedValue(new Error());
+      const error = new WsException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'sender_id was not found',
+        },
+      });
 
-      await expect(
-        messageService.create(createMessageDto),
-      ).rejects.toThrowError();
+      jest.spyOn(messageService, 'create').mockRejectedValue(error);
+
+      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+        error,
+      );
     });
 
     it('should return exception if contact id is not found when create message', async () => {
@@ -105,11 +118,18 @@ describe('MessageService', () => {
         message: 'message',
       };
 
-      jest.spyOn(messageService, 'create').mockRejectedValue(new Error());
+      const error = new WsException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'contact_id was not found',
+        },
+      });
 
-      await expect(
-        messageService.create(createMessageDto),
-      ).rejects.toThrowError();
+      jest.spyOn(messageService, 'create').mockRejectedValue(error);
+
+      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+        error,
+      );
     });
 
     it('should return exception if group id not found when create message', async () => {
@@ -119,11 +139,18 @@ describe('MessageService', () => {
         message: 'message',
       };
 
-      jest.spyOn(messageService, 'create').mockRejectedValue(new Error());
+      const error = new WsException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'group_id was not found',
+        },
+      });
 
-      await expect(
-        messageService.create(createMessageDto),
-      ).rejects.toThrowError();
+      jest.spyOn(messageService, 'create').mockRejectedValue(error);
+
+      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+        error,
+      );
     });
 
     it('should return exception if group id and contact id both were given when create message', async () => {
@@ -134,11 +161,19 @@ describe('MessageService', () => {
         message: 'message',
       };
 
-      jest.spyOn(messageService, 'create').mockRejectedValue(new Error());
+      const error = new WsException({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message:
+            'Either a contact id or a group id should be provided, not both',
+        },
+      });
 
-      await expect(
-        messageService.create(createMessageDto),
-      ).rejects.toThrowError();
+      jest.spyOn(messageService, 'create').mockRejectedValue(error);
+
+      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+        error,
+      );
     });
 
     it('should update message and return record', async () => {
@@ -178,16 +213,24 @@ describe('MessageService', () => {
         message: 'new message',
       };
 
-      jest.spyOn(messageService, 'update').mockRejectedValue(new Error());
+      const error = new WsException({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Message to update was not found',
+        },
+      });
 
-      await expect(
-        messageService.update(updateMessageDto),
-      ).rejects.toThrowError();
+      jest.spyOn(messageService, 'update').mockRejectedValue(error);
+
+      await expect(messageService.update(updateMessageDto)).rejects.toThrow(
+        error,
+      );
     });
 
     it('should find all private messages', async () => {
       const FindMessageDto = {
         contact_id: 'contact_id_1',
+        skip: 0,
       };
 
       const messageFoundMock = [
@@ -218,6 +261,7 @@ describe('MessageService', () => {
     it('should find all group messages', async () => {
       const FindMessageDto = {
         group_id: 'group_id_1',
+        skip: 0,
       };
 
       const messageFoundMock = [
@@ -248,6 +292,7 @@ describe('MessageService', () => {
     it('should return empty array if message not found', async () => {
       const FindMessageDto = {
         contact_id: 'not_exist_contact_id',
+        skip: 0,
       };
 
       jest.spyOn(messageService, 'findAll').mockResolvedValue([]);
@@ -295,7 +340,7 @@ describe('MessageService', () => {
       messageService = module.get<MessageService>(MessageService);
     });
 
-    beforeAll(async () => {
+    beforeEach(async () => {
       await prismaService.$transaction(async (ctx) => {
         await ctx.users.create({
           data: {
@@ -354,6 +399,16 @@ describe('MessageService', () => {
       });
     });
 
+    afterEach(async () => {
+      await prismaService.$transaction([
+        prismaService.users.deleteMany(),
+        prismaService.group.deleteMany(),
+        prismaService.groupMembership.deleteMany(),
+        prismaService.message.deleteMany(),
+        prismaService.contact.deleteMany(),
+      ]);
+    });
+
     it('should be defined', () => {
       expect(messageService).toBeDefined();
     });
@@ -393,9 +448,14 @@ describe('MessageService', () => {
         message: 'messsage',
       };
 
-      await expect(
-        messageService.create(createMessageDto),
-      ).rejects.toThrowError();
+      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+        new WsException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'contact_id was not found',
+          },
+        }),
+      );
     });
 
     it('should return exception if sender id not found when create message', async () => {
@@ -405,9 +465,14 @@ describe('MessageService', () => {
         message: 'messsage',
       };
 
-      await expect(
-        messageService.create(createMessageDto),
-      ).rejects.toThrowError();
+      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+        new WsException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'sender_id was not found',
+          },
+        }),
+      );
     });
 
     it('should return exception if group id not found when create message', async () => {
@@ -417,9 +482,14 @@ describe('MessageService', () => {
         message: 'message',
       };
 
-      await expect(
-        messageService.create(createMessageDto),
-      ).rejects.toThrowError();
+      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+        new WsException({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'group_id was not found',
+          },
+        }),
+      );
     });
 
     it('should return exception if group id and contact id both were given when create message', async () => {
@@ -430,14 +500,21 @@ describe('MessageService', () => {
         message: 'message',
       };
 
-      await expect(
-        messageService.create(createMessageDto),
-      ).rejects.toThrowError();
+      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+        new WsException({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message:
+              'Either a contact id or a group id should be provided, not both',
+          },
+        }),
+      );
     });
 
     it('should update message and return record', async () => {
-      const message = await prismaService.message.findFirst({
-        where: {
+      const message = await prismaService.message.create({
+        data: {
+          contact_id,
           sender_id: user_1,
           message: 'message',
         },
@@ -454,18 +531,28 @@ describe('MessageService', () => {
     });
 
     it('should find all message', async () => {
+      await prismaService.message.create({
+        data: {
+          contact_id,
+          sender_id: user_1,
+          message: 'message',
+        },
+      });
+
       const FindMessageDto = {
         contact_id,
+        skip: 0,
       };
 
       const [message] = await messageService.findAll(FindMessageDto);
 
-      expect(message.message).toEqual('change message');
+      expect(message.message).toEqual('message');
     });
 
     it('should return empty array if message not found', async () => {
       const FindMessageDto = {
-        group_id: 'not_exist_group_id', // it can also mean there is also no message created if group exist.
+        group_id,
+        skip: 0,
       };
 
       const messageFound = await messageService.findAll(FindMessageDto);
@@ -474,19 +561,27 @@ describe('MessageService', () => {
     });
 
     it('should remove message', async () => {
-      const messageId = await prismaService.message.findFirst({
-        where: {
+      const message = await prismaService.message.create({
+        data: {
+          contact_id,
           sender_id: user_1,
-          message: 'change message',
+          message: 'message',
         },
       });
+      await expect(
+        messageService.remove([message.id]),
+      ).resolves.toBeUndefined();
 
       await expect(
-        messageService.remove([messageId.id]),
-      ).resolves.toBeUndefined();
+        prismaService.message.findFirst({
+          where: {
+            id: message.id,
+          },
+        }),
+      ).resolves.toBeNull();
     });
 
-    it('should return exception if message that need to be remove not found', async () => {
+    it('should return void if message that need to be remove not found', async () => {
       await expect(
         messageService.remove(['not_exist_message_id']),
       ).resolves.toBeUndefined();
@@ -494,28 +589,10 @@ describe('MessageService', () => {
 
     afterAll(async () => {
       await prismaService.$transaction([
-        prismaService.message.deleteMany({
-          where: {
-            sender_id: user_1,
-          },
-        }),
-        prismaService.contact.deleteMany({
-          where: {
-            id: contact_id,
-          },
-        }),
-        prismaService.group.deleteMany({
-          where: {
-            id: group_id,
-          },
-        }),
-        prismaService.users.deleteMany({
-          where: {
-            user_id: {
-              in: [user_1, user_2, user_3],
-            },
-          },
-        }),
+        prismaService.message.deleteMany({}),
+        prismaService.contact.deleteMany({}),
+        prismaService.group.deleteMany({}),
+        prismaService.users.deleteMany({}),
       ]);
     });
   });

@@ -67,6 +67,8 @@ export class MessageService {
             .split('__')[2]
             .replace(' (index)', '');
 
+          this.logger.warn(`${errorField} not found`);
+
           throw new WsException({
             error: {
               code: 'NOT_FOUND',
@@ -90,7 +92,7 @@ export class MessageService {
   async findAll({
     contact_id,
     group_id,
-    date,
+    skip,
   }: FindMessageDto): Promise<MessageType[]> {
     this.logger.log('Find the messages');
 
@@ -108,11 +110,10 @@ export class MessageService {
     return await this.prismaService.message.findMany({
       where: {
         OR: [{ contact_id }, { group_id }],
-        sent_at: {
-          gte: date,
-        },
       },
       include: this.includeMessage,
+      skip,
+      take: 50,
     });
   }
 
@@ -141,6 +142,7 @@ export class MessageService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
+          this.logger.warn('Message not found');
           throw new WsException({
             error: {
               code: 'NOT_FOUND',
@@ -168,6 +170,6 @@ export class MessageService {
       },
     });
 
-    this.logger.log('Message deleted');
+    this.logger.log('Messages deleted');
   }
 }

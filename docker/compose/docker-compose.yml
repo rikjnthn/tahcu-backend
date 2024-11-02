@@ -2,21 +2,21 @@ name: 'tahcu_app'
 
 services:
   postgres:
-    image: postgres:15-alpine3.18
+    image: tahcu-postgres:v1
     container_name: postgres
     ports:
       - 5432
     restart: always
     env_file:
-      - .env.production
+      - ../../.env.production
     environment:
       - POSTGRES_USER=${DATABASE_USER}
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
       - POSTGRES_DB=${DATABASE_NAME}
     volumes:
       - postgres_db:/db/data
-    cpu_count: 1
-    mem_limit: 1gb
+    cpus: '0.50'
+    mem_limit: 250mb
 
   dragonfly:
     container_name: dragonfly
@@ -26,25 +26,21 @@ services:
     restart: always
     volumes:
       - dragonfly:/dragonfly/data
-    cpu_count: 1
-    mem_limit: 1gb
-
+    cpus: '0.50'
+    mem_limit: 250mb
   tahcu:
-    build:
-      context: ./
-      dockerfile: tahcu.dockerfile
     container_name: tahcu
-    image: tahcu
+    image: tahcu:v1
     ports:
       - 3001:3001
     restart: always
     env_file:
-      - .env.production
+      - ../../.env.production
     depends_on:
       - postgres
       - dragonfly
-    cpu_count: 1
-    mem_limit: 2gb
+    cpus: '0.50'
+    mem_limit: 500mb
 
 volumes:
   postgres_db:

@@ -1,27 +1,53 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { createTransport } from 'nodemailer';
+
 import { EmailService } from './email.service';
 import { RedisService } from '../redis/redis.service';
 import { OtpService } from '../otp/otp.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { OtpModule } from '../otp/otp.module';
 
+jest.mock('handlebars', () => {
+  return {
+    __esModule: true,
+    default: {
+      compile: jest.fn().mockReturnValue(jest.fn()),
+    },
+  };
+});
+
+jest.mock('nodemailer', () => {
+  return {
+    createTransport: jest.fn(),
+  };
+});
+
 describe('EmailService', () => {
   describe('Unit Testing', () => {
-    let prismaService: PrismaService;
     let redisService: RedisService;
     let otpService: OtpService;
     let emailService: EmailService;
 
     beforeAll(() => {
-      prismaService = new PrismaService();
       redisService = new RedisService();
       otpService = new OtpService(redisService);
-      emailService = new EmailService(prismaService, otpService);
+      emailService = new EmailService(otpService);
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
     });
 
     it('should be defined', () => {
       expect(emailService).toBeDefined();
+    });
+
+    it('should send email and return void', async () => {
+      jest.spyOn(emailService, 'sendEmail').mockResolvedValue(undefined);
+
+      await expect(
+        emailService.sendEmail('email@email.com'),
+      ).resolves.toBeUndefined();
     });
 
     afterAll(async () => {
@@ -43,8 +69,20 @@ describe('EmailService', () => {
       redisService = module.get<RedisService>(RedisService);
     });
 
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
     it('should be defined', () => {
       expect(emailService).toBeDefined();
+    });
+
+    it('should send email and return void', async () => {
+      (createTransport as jest.Mock).mockReturnValue({ sendMail: jest.fn() });
+
+      await expect(
+        emailService.sendEmail('email@email.com'),
+      ).resolves.toBeUndefined();
     });
 
     afterAll(async () => {

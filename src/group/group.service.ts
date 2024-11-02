@@ -71,10 +71,11 @@ export class GroupService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2003') {
+          this.logger.warn('Members not found');
           throw new BadRequestException({
             error: {
               code: 'NOT_FOUND',
-              message: 'The user to add to the group was not found',
+              message: 'The users to add to the group was not found',
             },
           });
         }
@@ -92,7 +93,7 @@ export class GroupService {
    * @returns group data
    */
   async findOne(groupId: string): Promise<GroupWithMemberShipType> {
-    this.logger.log('Find a group');
+    this.logger.log('Find group');
 
     const group = await this.prismaService.group.findFirst({
       where: {
@@ -122,6 +123,8 @@ export class GroupService {
       });
     }
 
+    this.logger.log('Group found');
+
     return group;
   }
 
@@ -132,27 +135,24 @@ export class GroupService {
    *
    * @returns array of groups data
    */
-  async findAll(user_id: string): Promise<GroupWithMemberShipType[]> {
+  async findAll(
+    user_id: string,
+    skip: number,
+  ): Promise<GroupWithMemberShipType[]> {
     this.logger.log('Find groups');
     const groups = await this.prismaService.group.findMany({
       where: {
-        group_membership: {
-          some: {
-            user_id,
-          },
-        },
+        group_membership: { some: { user_id } },
       },
       include: {
         group_membership: {
           include: {
-            user: {
-              select: {
-                username: true,
-              },
-            },
+            user: { select: { username: true } },
           },
         },
       },
+      skip,
+      take: 50,
     });
 
     return groups;
@@ -176,6 +176,7 @@ export class GroupService {
 
     const { description, name, new_admin } = updateGroupDto;
 
+    this.logger.log('Find group');
     const group = await this.prismaService.group.findFirst({
       where: {
         id: groupId,
@@ -194,7 +195,7 @@ export class GroupService {
     }
 
     if (group.admin_id !== user_id) {
-      this.logger.warn('Unauthorized');
+      this.logger.warn('Not admin');
 
       throw new UnauthorizedException({
         error: {
@@ -220,6 +221,8 @@ export class GroupService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2003') {
+          this.logger.warn('New admin not found');
+
           throw new BadRequestException({
             error: {
               code: 'NOT_FOUND',
@@ -245,10 +248,11 @@ export class GroupService {
     addMemberDto: AddMemberDto,
     user_id: string,
   ): Promise<MemberType[]> {
-    this.logger.log('Start adding the members');
+    this.logger.log('Start adding members');
 
     const { group_id, members } = addMemberDto;
 
+    this.logger.log('Find group');
     const group = await this.prismaService.group.findFirst({
       where: { id: group_id },
     });
@@ -265,7 +269,7 @@ export class GroupService {
     }
 
     if (group.admin_id !== user_id) {
-      this.logger.warn('Unauthorized');
+      this.logger.warn('Not admin');
 
       throw new UnauthorizedException({
         error: {
@@ -293,6 +297,7 @@ export class GroupService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2003') {
+          this.logger.warn('Members not found');
           throw new BadRequestException({
             err: {
               code: 'NOT_FOUND',
@@ -322,6 +327,7 @@ export class GroupService {
 
     const { group_id, members } = deleteMemberDto;
 
+    this.logger.log('Find group');
     const group = await this.prismaService.group.findFirst({
       where: { id: group_id },
     });
@@ -338,7 +344,7 @@ export class GroupService {
     }
 
     if (group.admin_id !== user_id) {
-      this.logger.warn('Unauthorized');
+      this.logger.warn('Not admin');
 
       throw new UnauthorizedException({
         error: {
@@ -376,6 +382,9 @@ export class GroupService {
     new_admin: string,
     user_id: string,
   ): Promise<void> {
+    this.logger.log('Start exiting group');
+
+    this.logger.log('Find group');
     const group = await this.prismaService.group.findFirst({
       where: { id: group_id },
       include: { group_membership: true },
@@ -437,6 +446,8 @@ export class GroupService {
             .split('__')[2]
             .replace(' (index)', '');
 
+          this.logger.warn(`${errorField} not found`);
+
           throw new BadRequestException({
             error: {
               code: 'NOT_FOUND',
@@ -446,6 +457,8 @@ export class GroupService {
         }
 
         if (error.code === 'P2025') {
+          this.logger.warn('Group membership not found');
+
           throw new BadRequestException({
             error: {
               code: 'NOT_FOUND',
@@ -484,7 +497,7 @@ export class GroupService {
     }
 
     if (group.admin_id !== user_id) {
-      this.logger.warn('Unauthorized');
+      this.logger.warn('Not admin');
 
       throw new UnauthorizedException({
         error: {
@@ -503,6 +516,7 @@ export class GroupService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
+          this.logger.warn('Group not found');
           throw new BadRequestException({
             error: {
               code: 'NOT_FOUND',

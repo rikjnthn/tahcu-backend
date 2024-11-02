@@ -1,4 +1,4 @@
-import { IsDate, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class FindMessageDto {
   @IsString({ message: 'contact id should be a string' })
@@ -9,7 +9,7 @@ export class FindMessageDto {
   @IsOptional()
   group_id?: string;
 
-  @IsDate({ message: 'data is not valid' })
-  @IsOptional()
-  date?: Date;
+  @IsNumber(undefined, { message: 'skip should be a number' })
+  @IsNotEmpty({ message: 'skip should not be empty' })
+  skip: number;
 }

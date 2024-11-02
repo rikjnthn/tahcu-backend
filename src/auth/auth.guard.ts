@@ -62,7 +62,7 @@ export class AuthGuard implements CanActivate {
 
     const client = context.switchToWs().getClient<Socket>();
 
-    const token = client.handshake['cookies'].tahcu_auth;
+    const token = client.handshake['cookies']?.tahcu_auth;
 
     const payload = await this.verifyJwt(token);
 
@@ -90,21 +90,15 @@ export class AuthGuard implements CanActivate {
         },
       });
     }
-    try {
-      this.logger.log('Verifying JWT token');
 
-      const payload = await this.jwtService.verifyAsync(token, {
+    this.logger.log('Verifying JWT token');
+
+    const payload = await this.jwtService
+      .verifyAsync(token, {
         secret: process.env.JWT_SECRET,
-      });
-
-      this.logger.log('Check if user exist');
-
-      const user = await this.prismaService.users.findFirst({
-        where: { id: payload.id },
-      });
-
-      if (!user) {
-        this.logger.warn('User does not exist');
+      })
+      .catch(() => {
+        this.logger.warn('JWT token is not verified');
 
         throw new UnauthorizedException({
           error: {
@@ -112,13 +106,16 @@ export class AuthGuard implements CanActivate {
             message: 'User token is not valid',
           },
         });
-      }
+      });
 
-      this.logger.log('JWT token verified');
+    this.logger.log('Check if user exist');
 
-      return payload;
-    } catch {
-      this.logger.warn('JWT token is not verified');
+    const user = await this.prismaService.users.findFirst({
+      where: { id: payload.id },
+    });
+
+    if (!user) {
+      this.logger.warn('User does not exist');
 
       throw new UnauthorizedException({
         error: {
@@ -127,5 +124,9 @@ export class AuthGuard implements CanActivate {
         },
       });
     }
+
+    this.logger.log('JWT token verified');
+
+    return payload;
   }
 }

@@ -75,10 +75,15 @@ describe('AuthGuard', () => {
     expect(isValid).toBeTruthy();
   });
 
-  it('should return false if token not valid in http connection', async () => {
-    jest
-      .spyOn(authGuard, 'canActivate')
-      .mockRejectedValue(new UnauthorizedException());
+  it('should throw error if token not valid in http connection', async () => {
+    const error = new UnauthorizedException({
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'User token is not valid',
+      },
+    });
+
+    jest.spyOn(authGuard, 'canActivate').mockRejectedValue(error);
 
     const contextMock = {
       switchToHttp: () => {
@@ -96,11 +101,11 @@ describe('AuthGuard', () => {
     } as ExecutionContext;
 
     await expect(authGuard.canActivate(contextMock)).rejects.toThrowError(
-      new UnauthorizedException(),
+      error,
     );
   });
 
-  it('should return false if token not valid in ws connection', async () => {
+  it('should throw error if token not valid in ws connection', async () => {
     jest
       .spyOn(authGuard, 'canActivate')
       .mockRejectedValue(new UnauthorizedException());

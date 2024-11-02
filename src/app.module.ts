@@ -4,7 +4,7 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { seconds, ThrottlerModule } from '@nestjs/throttler';
 
 import { PrismaModule } from './common/prisma/prisma.module';
 import { csrfProtection } from './common/middleware/csrf-protection.middleware';
@@ -27,7 +27,7 @@ import { RedisModule } from './common/redis/redis.module';
     GroupModule,
     ThrottlerModule.forRoot([
       {
-        ttl: parseInt(process.env.DEFAULT_THROTTLER_TTL),
+        ttl: seconds(parseInt(process.env.DEFAULT_THROTTLER_TTL)),
         limit: parseInt(process.env.DEFAULT_THROTTLER_LIMIT),
       },
     ]),

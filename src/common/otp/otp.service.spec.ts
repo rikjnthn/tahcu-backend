@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+
 import { OtpService } from './otp.service';
 import { RedisService } from '../redis/redis.service';
 import { RedisModule } from '../redis/redis.module';
@@ -13,6 +14,10 @@ describe('OtpService', () => {
       otpService = new OtpService(redisService);
     });
 
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
     it('should be defined', () => {
       expect(otpService).toBeDefined();
     });
@@ -25,15 +30,15 @@ describe('OtpService', () => {
       expect(otp).toEqual('1234');
     });
 
-    it('should return true if otp is valid', async () => {
-      jest.spyOn(otpService, 'validateOtp').mockResolvedValue(true);
+    it('should return void if otp is valid', async () => {
+      jest.spyOn(otpService, 'validateOtp').mockResolvedValue(undefined);
 
       const isOtpValid = await otpService.validateOtp(
         '1234',
         'email@gmail.com',
       );
 
-      expect(isOtpValid).toBeTruthy();
+      expect(isOtpValid).toBeUndefined();
     });
 
     it('should throw error if otp is not valid', async () => {
@@ -79,12 +84,12 @@ describe('OtpService', () => {
       await redisService.del('email@gmail.com');
     });
 
-    it('should return true if otp is valid', async () => {
+    it('should return void if otp is valid', async () => {
       const otp = await otpService.generateOtp('email@gmail.com');
 
       const isOtpValid = await otpService.validateOtp(otp, 'email@gmail.com');
 
-      expect(isOtpValid).toBeTruthy();
+      expect(isOtpValid).toBeUndefined();
     });
 
     it('should throw error if otp is not valid', async () => {

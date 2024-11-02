@@ -15,7 +15,7 @@ import {
   WebSocketServer,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { Throttle } from '@nestjs/throttler';
+import { seconds, Throttle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { parse } from 'cookie';
 
@@ -29,8 +29,6 @@ import validationExceptionFactory from 'src/common/helper/validation-exception-f
 import { MessageType } from './interface/message.interface';
 import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
 import { DeleteMessageDto } from './dto/delete-message.dto';
-
-const oneSecondInMs = 1000;
 
 @WebSocketGateway({
   path: '/message',
@@ -48,7 +46,7 @@ const oneSecondInMs = 1000;
     exceptionFactory: validationExceptionFactory,
   }),
 )
-@Throttle({ default: { ttl: oneSecondInMs, limit: 60 } })
+@Throttle({ default: { ttl: seconds(1), limit: 60 } })
 export class MessageGateway
   implements OnGatewayConnection, OnGatewayInit, OnGatewayDisconnect
 {
@@ -65,7 +63,6 @@ export class MessageGateway
     @MessageBody('data') createMessageDto: CreateMessageDto,
   ): Promise<void> {
     const message = await this.messageService.create(createMessageDto);
-
     this.server.to(chatId).emit('message', message);
   }
 
@@ -120,18 +117,24 @@ export class MessageGateway
 
     const handshake = client.handshake;
 
-    const cookies = parse(handshake.headers.cookie);
+    const cookies = parse(handshake.headers.cookie ?? '');
 
     const csrfTokenCookie = cookies.CSRF_TOKEN;
     const csrfTokenHeader = handshake.headers['x-csrf-token'];
 
+    this.logger.log('validate CSRF_TOKEN');
+
     if (!csrfTokenCookie || !csrfTokenHeader) {
+      this.logger.warn('Either one or both token is empty');
+
       this.server.emit('error', { error: { code: 'UNAUTHORIZED' } });
       client.disconnect();
       return;
     }
 
     if (csrfTokenCookie !== csrfTokenHeader) {
+      this.logger.warn('CSRF_TOKEN is not valid');
+
       this.server.emit('error', { error: { code: 'UNAUTHORIZED' } });
       client.disconnect();
       return;
@@ -140,6 +143,8 @@ export class MessageGateway
     const tahcu_auth = cookies.tahcu_auth;
 
     handshake['cookies'] = { tahcu_auth };
+
+    this.logger.log('CSRF_TOKEN valid');
   }
 
   handleDisconnect(): void {

@@ -9,9 +9,7 @@ import validationExceptionFactory from './common/helper/validation-exception-fac
 import { ThrottlerFilter } from './common/filter/throttler.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    logger: process.env.NODE_ENV === 'development' ? ['log', 'warn'] : false,
-  });
+  const app = await NestFactory.create(AppModule);
 
   app.use(helmet(), cookieParser());
 
@@ -25,7 +23,7 @@ async function bootstrap() {
     const config = new DocumentBuilder()
       .setTitle('Chat app')
       .setDescription('Chat app backend')
-      .setVersion('1.0')
+      .setVersion('3.0.0')
       .addTag('Tahcu')
       .build();
 

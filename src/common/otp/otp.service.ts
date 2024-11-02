@@ -17,9 +17,10 @@ export class OtpService {
    * @returns otp
    */
   async generateOtp(email: string): Promise<string> {
-    this.logger.log('Create OTP');
+    this.logger.log('Start generate OTP');
 
     if (!email) {
+      this.logger.warn('Email is empty');
       throw new BadRequestException({
         error: {
           code: 'INVALID',
@@ -29,6 +30,8 @@ export class OtpService {
     }
 
     const fifteenMinutesInSeconds = 900;
+
+    this.logger.log('Generate otp');
 
     const otp = randomInt(1_000, 9_999);
 
@@ -45,7 +48,7 @@ export class OtpService {
    *
    * @returns otp validity
    */
-  async validateOtp(inputOtp: string, email: string): Promise<boolean> {
+  async validateOtp(inputOtp: string, email: string): Promise<void> {
     this.logger.log('Start validating otp');
 
     if (!inputOtp) {
@@ -88,7 +91,5 @@ export class OtpService {
     await this.redisService.del(email);
 
     this.logger.log('OTP validated');
-
-    return true;
   }
 }

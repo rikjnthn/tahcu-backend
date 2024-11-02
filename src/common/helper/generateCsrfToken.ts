@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { createHmac, randomBytes } from 'crypto';
 
 /**
@@ -8,6 +9,7 @@ import { createHmac, randomBytes } from 'crypto';
  * @returns CSRF token
  */
 export default function generateCsrfToken(sessionId: string): string {
+  Logger.log('Generate CSRF_TOKEN');
   const secret = process.env.CSRF_SECRET;
 
   const message = sessionId + '!' + randomBytes(64).toString('base64');

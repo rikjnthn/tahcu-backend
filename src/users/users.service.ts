@@ -9,6 +9,7 @@ import { UserType } from './interface/user.interface';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeEmailDto } from './dto/change-email.dto';
 import { OtpService } from 'src/common/otp/otp.service';
+import hashPassword from 'src/common/helper/hash-password';
 
 @Injectable()
 export class UsersService {
@@ -28,23 +29,6 @@ export class UsersService {
   ) {}
 
   /**
-   * Hashed password using bcrypt
-   *
-   * @param password password that need to be hashed
-   *
-   * @returns hashed password
-   */
-  private async hashPassword(password: string): Promise<string> {
-    this.logger.log('Start hashing password');
-
-    const saltRounds = 10;
-    const generatedSalt = await bcrypt.genSalt(saltRounds);
-    const hashedPassword = await bcrypt.hash(password, generatedSalt);
-
-    return hashedPassword;
-  }
-
-  /**
    * Create user
    *
    * @param createUserDto dto to create user
@@ -54,7 +38,7 @@ export class UsersService {
   async create(createUserDto: CreateUserDto): Promise<UserType> {
     this.logger.log('Start creating a user');
 
-    const hashedPassword = await this.hashPassword(createUserDto.password);
+    const hashedPassword = await hashPassword(createUserDto.password);
     try {
       const createdUser = await this.prismaService.users.create({
         data: {
@@ -76,6 +60,8 @@ export class UsersService {
             },
           );
 
+          this.logger.warn('Duplicate user');
+
           throw new BadRequestException({
             error: {
               code: 'DUPLICATE_VALUE',
@@ -96,7 +82,7 @@ export class UsersService {
    * @returns user data
    */
   async findOne(id: string): Promise<UserType> {
-    this.logger.log('Find the user');
+    this.logger.log('Find user');
 
     const user = await this.prismaService.users.findFirst({
       where: { id },
@@ -114,6 +100,8 @@ export class UsersService {
       });
     }
 
+    this.logger.log('User found');
+
     return user;
   }
 
@@ -125,7 +113,7 @@ export class UsersService {
    * @returns array of users data
    */
   async find(userId: string): Promise<UserType[]> {
-    this.logger.log('Find the users');
+    this.logger.log('Find users');
 
     const users = this.prismaService.users.findMany({
       where: {
@@ -148,7 +136,7 @@ export class UsersService {
    * @returns updated users data
    */
   async update(id: string, updateUserDto: UpdateUserDto): Promise<UserType> {
-    this.logger.log('Start updating the user');
+    this.logger.log('Start updating user');
     try {
       const updatedUser = await this.prismaService.users.update({
         where: { id },
@@ -167,6 +155,8 @@ export class UsersService {
               return { [field]: `${updateUserDto[field]} already exist` };
             },
           );
+
+          this.logger.warn('Duplicate some user field');
 
           throw new BadRequestException({
             error: {
@@ -187,15 +177,15 @@ export class UsersService {
    * @param id id to delete user
    */
   async remove(id: string): Promise<void> {
-    this.logger.log('Start deleting the user');
+    this.logger.log('Start deleting user');
 
     try {
-      await this.prismaService.users.delete({
-        where: { id },
-      });
+      await this.prismaService.users.delete({ where: { id } });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code == 'P2025') {
+          this.logger.warn('User not found');
+
           throw new BadRequestException({
             error: {
               code: 'NOT_FOUND',
@@ -237,25 +227,30 @@ export class UsersService {
       });
     }
 
+    this.logger.log('Check password');
+
     const isPasswordValid = await bcrypt.compare(
       current_password,
       user.password,
     );
 
-    if (!isPasswordValid)
+    if (!isPasswordValid) {
+      this.logger.warn('Passwor is wrong');
+
       throw new BadRequestException({
         error: {
           code: 'UNAUTHORIZED',
           message: 'Wrong password',
         },
       });
+    }
 
     this.logger.log('Start changing password');
 
     await this.prismaService.users.update({
       where: { id },
       data: {
-        password: await this.hashPassword(new_password),
+        password: await hashPassword(new_password),
       },
     });
   }
@@ -272,20 +267,8 @@ export class UsersService {
   ): Promise<UserType> {
     this.logger.log('Start changing the email');
 
-    const isOTPValid = await this.otpService.validateOtp(
-      changeEmailDto.otp,
-      changeEmailDto.email,
-    );
-
-    if (!isOTPValid) {
-      this.logger.warn('OTP was not valid');
-      throw new BadRequestException({
-        error: {
-          code: 'INVALID',
-          message: 'OTP was not valid',
-        },
-      });
-    }
+    //First validate otp, if valid continue
+    await this.otpService.validateOtp(changeEmailDto.otp, changeEmailDto.email);
 
     try {
       const updatedUser = await this.prismaService.users.update({
@@ -293,6 +276,8 @@ export class UsersService {
         data: { email: changeEmailDto.email },
         select: this.selectUserData,
       });
+
+      this.logger.log('Email changed');
 
       return updatedUser;
     } catch (error) {
@@ -303,6 +288,8 @@ export class UsersService {
               return { [field]: `${changeEmailDto[field]} already exist` };
             },
           );
+
+          this.logger.warn('Email duplicate');
 
           throw new BadRequestException({
             error: {
