@@ -5,7 +5,7 @@ services:
     image: tahcu-postgres:v1
     container_name: postgres
     ports:
-      - 5432
+      - ${DATABASE_PORT}
     restart: always
     env_file:
       - ../../.env.production
@@ -22,7 +22,7 @@ services:
     container_name: dragonfly
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
     ports:
-      - 6379
+      - ${DRAGONFLY_PORT}
     restart: always
     volumes:
       - dragonfly:/dragonfly/data
@@ -32,7 +32,7 @@ services:
     container_name: tahcu
     image: tahcu:v1
     ports:
-      - 3001:3001
+      - ${APP_PORT}:${APP_PORT}
     restart: always
     env_file:
       - ../../.env.production

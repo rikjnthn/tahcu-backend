@@ -61,7 +61,10 @@ export class EmailService {
         html: await this.getEmailTemplate({ otp }),
       },
       (err) => {
-        if (err) this.logger.warn('Email is not valid');
+        if (err) {
+          this.logger.warn('Email is not valid');
+          return;
+        }
 
         this.logger.log('Email sent');
       },
