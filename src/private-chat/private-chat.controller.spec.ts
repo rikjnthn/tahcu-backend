@@ -125,10 +125,10 @@ describe('PrivateChatController', () => {
         .spyOn(privateChatController, 'findAll')
         .mockResolvedValue(foundPrivateChatMock);
 
-      const foundPrivateChat = await privateChatController.findAll('user_1', 0);
+      const foundPrivateChat = await privateChatController.findAll('user_1');
 
       expect(privateChatController.findAll).toBeCalled();
-      expect(privateChatController.findAll).toBeCalledWith('user_1', 0);
+      expect(privateChatController.findAll).toBeCalledWith('user_1');
 
       expect(foundPrivateChat).toEqual(foundPrivateChatMock);
     });
@@ -137,7 +137,7 @@ describe('PrivateChatController', () => {
       jest.spyOn(privateChatController, 'findAll').mockResolvedValue([]);
 
       await expect(
-        privateChatController.findAll('not_exist_user_id', 0),
+        privateChatController.findAll('not_exist_user_id'),
       ).resolves.toEqual([]);
     });
 
@@ -295,10 +295,7 @@ describe('PrivateChatController', () => {
     it('should find private chat contact', async () => {
       await privateChatController.create(friends_id, user_id);
 
-      const [foundPrivateChat] = await privateChatController.findAll(
-        user_id,
-        0,
-      );
+      const [foundPrivateChat] = await privateChatController.findAll(user_id);
 
       expect(foundPrivateChat.friends_id).toEqual(friends_id);
       expect(foundPrivateChat.user_id).toEqual(user_id);
@@ -306,7 +303,7 @@ describe('PrivateChatController', () => {
 
     it('should return empty array if private chat not found', async () => {
       await expect(
-        privateChatController.findAll('not_exist_user_id', 0),
+        privateChatController.findAll('not_exist_user_id'),
       ).resolves.toEqual([]);
     });
 
