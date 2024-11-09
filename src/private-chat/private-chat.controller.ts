@@ -7,8 +7,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  Query,
-  ParseIntPipe,
 } from '@nestjs/common';
 import {
   seconds,
@@ -38,11 +36,8 @@ export class PrivateChatController {
   }
 
   @Get()
-  async findAll(
-    @User('user_id') userId: string,
-    @Query('skip', ParseIntPipe) skip: number,
-  ): Promise<ContactType[]> {
-    return await this.privateChatService.findAll(userId, skip);
+  async findAll(@User('user_id') userId: string): Promise<ContactType[]> {
+    return await this.privateChatService.findAll(userId);
   }
 
   @Delete(':id')
