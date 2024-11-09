@@ -135,10 +135,7 @@ export class GroupService {
    *
    * @returns array of groups data
    */
-  async findAll(
-    user_id: string,
-    skip: number,
-  ): Promise<GroupWithMemberShipType[]> {
+  async findAll(user_id: string): Promise<GroupWithMemberShipType[]> {
     this.logger.log('Find groups');
     const groups = await this.prismaService.group.findMany({
       where: {
@@ -151,8 +148,6 @@ export class GroupService {
           },
         },
       },
-      skip,
-      take: 50,
     });
 
     return groups;

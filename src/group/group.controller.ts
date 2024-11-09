@@ -9,8 +9,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  Query,
-  ParseIntPipe,
 } from '@nestjs/common';
 import { seconds, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
@@ -50,9 +48,8 @@ export class GroupController {
   @Get()
   async findAll(
     @User('user_id') userId: string,
-    @Query('skip', ParseIntPipe) skip: number,
   ): Promise<GroupWithMemberShipType[]> {
-    return await this.groupService.findAll(userId, skip);
+    return await this.groupService.findAll(userId);
   }
 
   @Patch('update-group/:groupId')

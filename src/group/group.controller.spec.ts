@@ -318,10 +318,10 @@ describe('GroupController', () => {
 
       jest.spyOn(groupController, 'findAll').mockResolvedValue(foundGroupMock);
 
-      const createdGroup = await groupController.findAll(user_1, 0);
+      const createdGroup = await groupController.findAll(user_1);
 
       expect(groupController.findAll).toBeCalled();
-      expect(groupController.findAll).toBeCalledWith(user_1, 0);
+      expect(groupController.findAll).toBeCalledWith(user_1);
 
       expect(createdGroup).toEqual(foundGroupMock);
     });
@@ -329,9 +329,9 @@ describe('GroupController', () => {
     it('should return empty array if user not joined any group', async () => {
       jest.spyOn(groupController, 'findAll').mockResolvedValue([]);
 
-      await expect(
-        groupController.findAll('no_group_user', 0),
-      ).resolves.toEqual([]);
+      await expect(groupController.findAll('no_group_user')).resolves.toEqual(
+        [],
+      );
     });
 
     it('should update group and return record', async () => {
@@ -828,7 +828,7 @@ describe('GroupController', () => {
         'user_id_1',
       );
 
-      const [group] = await groupController.findAll('user_id_1', 0);
+      const [group] = await groupController.findAll('user_id_1');
 
       expect(group.name).toEqual('group_name');
       expect(group.description).toEqual('group_description');
@@ -844,7 +844,7 @@ describe('GroupController', () => {
     });
 
     it('should return empty array if user not joined any group', async () => {
-      await expect(groupController.findAll('user_5', 0)).resolves.toEqual([]);
+      await expect(groupController.findAll('user_5')).resolves.toEqual([]);
     });
 
     it('should update group and return record', async () => {

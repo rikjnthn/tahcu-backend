@@ -92,14 +92,12 @@ export class PrivateChatService {
    *
    * @returns array of contacts data
    */
-  async findAll(user_id: string, skip: number): Promise<ContactType[]> {
+  async findAll(user_id: string): Promise<ContactType[]> {
     this.logger.log('Find private chats');
 
     return await this.prismaService.contact.findMany({
       where: { OR: [{ user_id }, { friends_id: user_id }] },
       include: this.contactInclude,
-      skip,
-      take: 50,
     });
   }
 
