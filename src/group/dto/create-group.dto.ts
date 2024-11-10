@@ -13,7 +13,7 @@ export class CreateGroupDto {
   @IsOptional()
   @MaxLength(600, {
     each: true,
-    message: 'name should contain a maximum of 600 letters',
+    message: 'group description should contain a maximum of 600 letters',
   })
   description?: string;
 
@@ -21,7 +21,7 @@ export class CreateGroupDto {
   @IsNotEmpty({ message: 'group name should not be empty' })
   @MaxLength(30, {
     each: true,
-    message: 'name should contain a maximum of 30 letters',
+    message: 'group name should contain a maximum of 30 letters',
   })
   name: string;
 

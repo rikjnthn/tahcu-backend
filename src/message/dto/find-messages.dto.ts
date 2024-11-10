@@ -1,14 +1,11 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { PartialType, PickType } from '@nestjs/mapped-types';
+import { IsNotEmpty, IsNumber } from 'class-validator';
+import { CreateMessageDto } from './create-message.dto';
 
-export class FindMessageDto {
-  @IsString({ message: 'contact id should be a string' })
-  @IsOptional()
-  contact_id?: string;
-
-  @IsString({ message: 'group id should be a string' })
-  @IsOptional()
-  group_id?: string;
-
+export class FindMessageDto extends PickType(PartialType(CreateMessageDto), [
+  'contact_id',
+  'group_id',
+]) {
   @IsNumber(undefined, { message: 'skip should be a number' })
   @IsNotEmpty({ message: 'skip should not be empty' })
   skip: number;
