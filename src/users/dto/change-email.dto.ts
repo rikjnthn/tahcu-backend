@@ -1,10 +1,9 @@
-import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
+import { PickType } from '@nestjs/mapped-types';
+import { IsNotEmpty, IsString, Length } from 'class-validator';
 
-export class ChangeEmailDto {
-  @IsNotEmpty({ message: 'email should not be empty' })
-  @IsEmail(undefined, { message: 'email is not valid' })
-  email: string;
+import { CreateUserDto } from './create-user.dto';
 
+export class ChangeEmailDto extends PickType(CreateUserDto, ['email']) {
   @IsNotEmpty({ message: 'otp should not be empty' })
   @IsString({ message: 'otp should be a string' })
   @Length(4, 4, { message: 'otp is not valid' })
