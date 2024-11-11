@@ -115,7 +115,7 @@ export class MessageService {
       skip,
       take: 50,
       orderBy: {
-        sent_at: 'asc',
+        sent_at: 'desc',
       },
     });
   }
