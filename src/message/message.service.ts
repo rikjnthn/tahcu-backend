@@ -114,6 +114,9 @@ export class MessageService {
       include: this.includeMessage,
       skip,
       take: 50,
+      orderBy: {
+        sent_at: 'asc',
+      },
     });
   }
 
