@@ -20,9 +20,9 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { AddMemberDto } from './dto/add-member.dto';
 import { DeleteMemberDto } from './dto/delete-member.dto';
 import {
+  GroupMemberShipType,
   GroupType,
   GroupWithMemberShipType,
-  MemberType,
 } from './interface/group.interface';
 
 @Controller('group')
@@ -65,7 +65,7 @@ export class GroupController {
   async addMembers(
     @Body() addMemberDto: AddMemberDto,
     @User('user_id') userId: string,
-  ): Promise<MemberType[]> {
+  ): Promise<GroupMemberShipType[]> {
     return await this.groupService.addMembers(addMemberDto, userId);
   }
 
@@ -73,7 +73,7 @@ export class GroupController {
   async deleteMembers(
     @Body() deleteMemberDto: DeleteMemberDto,
     @User('user_id') userId: string,
-  ): Promise<MemberType[]> {
+  ): Promise<GroupMemberShipType[]> {
     return await this.groupService.deleteMembers(deleteMemberDto, userId);
   }
 

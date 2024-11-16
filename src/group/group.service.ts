@@ -12,9 +12,9 @@ import { PrismaService } from 'src/common/prisma/prisma.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { DeleteMemberDto } from './dto/delete-member.dto';
 import {
+  GroupMemberShipType,
   GroupType,
   GroupWithMemberShipType,
-  MemberType,
 } from './interface/group.interface';
 
 @Injectable()
@@ -102,11 +102,7 @@ export class GroupService {
       include: {
         group_membership: {
           include: {
-            user: {
-              select: {
-                username: true,
-              },
-            },
+            user: { select: { username: true } },
           },
         },
       },
@@ -143,9 +139,7 @@ export class GroupService {
       },
       include: {
         group_membership: {
-          include: {
-            user: { select: { username: true } },
-          },
+          include: { user: { select: { username: true } } },
         },
       },
     });
@@ -242,7 +236,7 @@ export class GroupService {
   async addMembers(
     addMemberDto: AddMemberDto,
     user_id: string,
-  ): Promise<MemberType[]> {
+  ): Promise<GroupMemberShipType[]> {
     this.logger.log('Start adding members');
 
     const { group_id, members } = addMemberDto;
@@ -284,6 +278,7 @@ export class GroupService {
 
       const addedMember = await this.prismaService.groupMembership.findMany({
         where: { group_id },
+        include: { user: { select: { username: true } } },
       });
 
       this.logger.log('Members added');
@@ -317,7 +312,7 @@ export class GroupService {
   async deleteMembers(
     deleteMemberDto: DeleteMemberDto,
     user_id: string,
-  ): Promise<MemberType[]> {
+  ): Promise<GroupMemberShipType[]> {
     this.logger.log('Start delete members');
 
     const { group_id, members } = deleteMemberDto;
@@ -358,6 +353,7 @@ export class GroupService {
 
     const updatedMember = await this.prismaService.groupMembership.findMany({
       where: { group_id },
+      include: { user: { select: { username: true } } },
     });
 
     this.logger.log('Members deleted');

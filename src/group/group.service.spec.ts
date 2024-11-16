@@ -125,6 +125,9 @@ describe('GroupService', () => {
         },
         {
           id: 'membership_id_3',
+          user: {
+            username: 'username_3',
+          },
           user_id: user_3,
           group_id: '1',
           joined_at: new Date(),
@@ -471,12 +474,18 @@ describe('GroupService', () => {
       const deletedMemberMock = [
         {
           id: 'membership_id_1',
+          user: {
+            username: 'username_1',
+          },
           user_id: user_1,
           group_id: 'group_id',
           joined_at: new Date(),
         },
         {
           id: 'membership_id_2',
+          user: {
+            username: 'username_2',
+          },
           user_id: user_2,
           group_id: 'group_id',
           joined_at: new Date(),
