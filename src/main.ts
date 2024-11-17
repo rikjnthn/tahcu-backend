@@ -23,7 +23,7 @@ async function bootstrap() {
     const config = new DocumentBuilder()
       .setTitle('Chat app')
       .setDescription('Chat app backend')
-      .setVersion('3.0.5')
+      .setVersion('3.0.6')
       .addTag('Tahcu')
       .build();
 
