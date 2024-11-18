@@ -79,7 +79,7 @@ export class AuthController {
   }
 
   @Throttle({ default: { ttl: minutes(30), limit: 15 } })
-  @Post('send-otp')
+  @Post('send-reset-password-otp')
   async sendResetPasswordOtp(
     @Body() sendResetPasswordOTPDto: SendResetPasswordOTPDto,
   ): Promise<void> {
@@ -87,7 +87,7 @@ export class AuthController {
   }
 
   @Throttle({ default: { ttl: hours(12), limit: 5 } })
-  @Post('forget-password')
+  @Post('reset-password')
   async resetPassword(
     @Body() resetPasswordDto: ResetPasswordDto,
   ): Promise<void> {
