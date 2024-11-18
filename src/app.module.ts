@@ -45,6 +45,8 @@ export class AppModule implements NestModule {
         { path: '/auth/sign-up', method: RequestMethod.POST },
         { path: '/auth/verify-tahcu-token/:token', method: RequestMethod.GET },
         { path: '/auth/send-otp', method: RequestMethod.POST },
+        { path: '/auth/send-reset-password-otp', method: RequestMethod.POST },
+        { path: '/auth/reset-password', method: RequestMethod.POST },
       )
       .forRoutes(
         { path: '*', method: RequestMethod.PATCH },
