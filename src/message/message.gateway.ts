@@ -17,13 +17,12 @@ import {
 } from '@nestjs/websockets';
 import { seconds, Throttle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
-import { parse } from 'cookie';
+import * as cookie from 'cookie';
 
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { WsExceptionFilter } from 'src/common/filter/ws-exception.filter';
-import { AuthGuard } from 'src/auth/auth.guard';
 import { FindMessageDto } from './dto/find-messages.dto';
 import validationExceptionFactory from 'src/common/helper/validation-exception-factory';
 import { MessageType } from './interface/message.interface';
@@ -40,7 +39,7 @@ import { DeleteMessageDto } from './dto/delete-message.dto';
   },
 })
 @UseFilters(WsExceptionFilter)
-@UseGuards(AuthGuard, WsThrottlerGuard)
+@UseGuards(WsThrottlerGuard)
 @UsePipes(
   new ValidationPipe({
     exceptionFactory: validationExceptionFactory,
@@ -113,11 +112,11 @@ export class MessageGateway
   }
 
   handleConnection(client: Socket): void {
-    this.logger.log('Websocket connected');
+    this.logger.log('Handle connection');
 
     const handshake = client.handshake;
 
-    const cookies = parse(handshake.headers.cookie ?? '');
+    const cookies = cookie.parse(handshake.headers.cookie ?? '');
 
     const csrfTokenCookie = cookies.CSRF_TOKEN;
     const csrfTokenHeader = handshake.headers['x-csrf-token'];
@@ -145,6 +144,8 @@ export class MessageGateway
     handshake['cookies'] = { tahcu_auth };
 
     this.logger.log('CSRF_TOKEN valid');
+
+    this.logger.log('Connected to socket');
   }
 
   handleDisconnect(): void {
