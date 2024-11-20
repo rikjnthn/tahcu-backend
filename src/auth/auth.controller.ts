@@ -72,13 +72,13 @@ export class AuthController {
     this.sentCookie(tokens, res);
   }
 
-  @Throttle({ default: { ttl: minutes(30), limit: 15 } })
+  @Throttle({ default: { ttl: minutes(2), limit: 1 } })
   @Post('send-otp')
   async sendOtp(@Body() sendOTPDto: SendOTPDto): Promise<void> {
     await this.authService.sendOtp(sendOTPDto);
   }
 
-  @Throttle({ default: { ttl: minutes(30), limit: 15 } })
+  @Throttle({ default: { ttl: minutes(2), limit: 1 } })
   @Post('send-reset-password-otp')
   async sendResetPasswordOtp(
     @Body() sendResetPasswordOTPDto: SendResetPasswordOTPDto,
