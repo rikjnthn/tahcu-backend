@@ -7,7 +7,7 @@ import {
 import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 
-@Catch(UnauthorizedException, BadRequestException)
+@Catch()
 export class WsExceptionFilter {
   catch(
     exception: WsException | UnauthorizedException | BadRequestException,
