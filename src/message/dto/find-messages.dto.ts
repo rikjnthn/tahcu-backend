@@ -1,8 +1,8 @@
-import { PartialType, PickType } from '@nestjs/mapped-types';
+import { PickType } from '@nestjs/mapped-types';
 import { IsNotEmpty, IsNumber } from 'class-validator';
 import { CreateMessageDto } from './create-message.dto';
 
-export class FindMessageDto extends PickType(PartialType(CreateMessageDto), [
+export class FindMessageDto extends PickType(CreateMessageDto, [
   'contact_id',
   'group_id',
 ]) {
