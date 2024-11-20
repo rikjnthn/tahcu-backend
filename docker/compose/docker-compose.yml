@@ -14,7 +14,7 @@ services:
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
       - POSTGRES_DB=${DATABASE_NAME}
     volumes:
-      - postgres_db:/db/data
+      - postgres_db:/var/lib/postgresql/data
     cpus: '0.50'
     mem_limit: 250mb
 
@@ -25,7 +25,7 @@ services:
       - ${DRAGONFLY_PORT}
     restart: always
     volumes:
-      - dragonfly:/dragonfly/data
+      - dragonfly:/data
     cpus: '0.50'
     mem_limit: 250mb
   tahcu:
