@@ -15,10 +15,19 @@ export class WsExceptionFilter {
   ) {
     const client = host.switchToWs().getClient<Socket>();
 
-    this.emitException(exception, client);
+    if (exception instanceof BadRequestException) {
+      this.emitException(exception.getResponse(), client);
+    } else if (exception instanceof UnauthorizedException) {
+      this.emitException(exception.getResponse(), client);
+    } else if (exception instanceof WsException) {
+      this.emitException(exception.getError(), client);
+    }
   }
 
-  private emitException(errObject: Record<string, any>, client: Socket) {
+  private emitException(
+    errObject: string | Record<string, any>,
+    client: Socket,
+  ) {
     client.emit('error', errObject);
   }
 }

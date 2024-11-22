@@ -26,10 +26,14 @@ export class MessageService {
    * Create message
    *
    * @param createMessageDto dto to create message
+   * @param sender_id user id that create message
    *
    * @returns message data
    */
-  async create(createMessageDto: CreateMessageDto): Promise<MessageType> {
+  async create(
+    createMessageDto: CreateMessageDto,
+    sender_id: string,
+  ): Promise<MessageType> {
     this.logger.log('Start creating a message');
 
     const { contact_id, group_id } = createMessageDto;
@@ -48,7 +52,7 @@ export class MessageService {
 
     try {
       const createdMessage = await this.prismaService.message.create({
-        data: createMessageDto,
+        data: { ...createMessageDto, sender_id },
         include: this.includeMessage,
       });
 
