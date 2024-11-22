@@ -25,7 +25,6 @@ describe('MessageService', () => {
 
     it('should create private message and return record', async () => {
       const createPrivateMessageDto = {
-        sender_id: 'user_1',
         contact_id: 'contact_id_1',
         message: 'message',
       };
@@ -49,17 +48,20 @@ describe('MessageService', () => {
 
       const createdPrivateMessage = await messageService.create(
         createPrivateMessageDto,
+        'user_1',
       );
 
       expect(messageService.create).toBeCalled();
-      expect(messageService.create).toBeCalledWith(createPrivateMessageDto);
+      expect(messageService.create).toBeCalledWith(
+        createPrivateMessageDto,
+        'user_1',
+      );
 
       expect(createdPrivateMessage).toEqual(createdPrivateMessageMock);
     });
 
     it('should create group message and return record', async () => {
       const createGroupMessageDto = {
-        sender_id: 'user_1',
         group_id: 'group_id_1',
         message: 'message',
       };
@@ -83,16 +85,19 @@ describe('MessageService', () => {
 
       const createdGroupMessage = await messageService.create(
         createGroupMessageDto,
+        'user_1',
       );
 
-      expect(messageService.create).toBeCalledWith(createGroupMessageDto);
+      expect(messageService.create).toBeCalledWith(
+        createGroupMessageDto,
+        'user_1',
+      );
 
       expect(createdGroupMessage).toEqual(createdGroupMessageMock);
     });
 
     it('should return exception if sender id not found when create message', async () => {
       const createMessageDto = {
-        sender_id: 'not_exist_user_id',
         contact_id: 'contact_id_1',
         message: 'message',
       };
@@ -106,14 +111,13 @@ describe('MessageService', () => {
 
       jest.spyOn(messageService, 'create').mockRejectedValue(error);
 
-      await expect(messageService.create(createMessageDto)).rejects.toThrow(
-        error,
-      );
+      await expect(
+        messageService.create(createMessageDto, 'not_exist_user_id'),
+      ).rejects.toThrow(error);
     });
 
     it('should return exception if contact id is not found when create message', async () => {
       const createMessageDto = {
-        sender_id: 'user_1',
         contact_id: 'not_exist_contact_id',
         message: 'message',
       };
@@ -127,14 +131,13 @@ describe('MessageService', () => {
 
       jest.spyOn(messageService, 'create').mockRejectedValue(error);
 
-      await expect(messageService.create(createMessageDto)).rejects.toThrow(
-        error,
-      );
+      await expect(
+        messageService.create(createMessageDto, 'user_1'),
+      ).rejects.toThrow(error);
     });
 
     it('should return exception if group id not found when create message', async () => {
       const createMessageDto = {
-        sender_id: 'user_1',
         group_id: 'not_exist_group_id',
         message: 'message',
       };
@@ -148,14 +151,13 @@ describe('MessageService', () => {
 
       jest.spyOn(messageService, 'create').mockRejectedValue(error);
 
-      await expect(messageService.create(createMessageDto)).rejects.toThrow(
-        error,
-      );
+      await expect(
+        messageService.create(createMessageDto, 'user_1'),
+      ).rejects.toThrow(error);
     });
 
     it('should return exception if group id and contact id both were given when create message', async () => {
       const createMessageDto = {
-        sender_id: 'user_1',
         group_id: 'group_id_1',
         contact_id: 'contact_id_1',
         message: 'message',
@@ -171,9 +173,9 @@ describe('MessageService', () => {
 
       jest.spyOn(messageService, 'create').mockRejectedValue(error);
 
-      await expect(messageService.create(createMessageDto)).rejects.toThrow(
-        error,
-      );
+      await expect(
+        messageService.create(createMessageDto, 'user_1'),
+      ).rejects.toThrow(error);
     });
 
     it('should update message and return record', async () => {
@@ -415,40 +417,45 @@ describe('MessageService', () => {
 
     it('should create private message and return record', async () => {
       const createMessageDto = {
-        sender_id: user_1,
         contact_id,
         message: 'message',
       };
 
-      const createdMessage = await messageService.create(createMessageDto);
+      const createdMessage = await messageService.create(
+        createMessageDto,
+        user_1,
+      );
 
       expect(createdMessage.message).toBe(createMessageDto.message);
       expect(createdMessage.contact_id).toBe(createMessageDto.contact_id);
-      expect(createdMessage.sender_id).toBe(createMessageDto.sender_id);
+      expect(createdMessage.sender_id).toBe(user_1);
     });
 
     it('should create group message and return record', async () => {
       const createMessageDto = {
-        sender_id: user_1,
         group_id,
         message: 'message',
       };
 
-      const createdMessage = await messageService.create(createMessageDto);
+      const createdMessage = await messageService.create(
+        createMessageDto,
+        user_1,
+      );
 
       expect(createdMessage.message).toBe(createMessageDto.message);
       expect(createdMessage.group_id).toBe(createMessageDto.group_id);
-      expect(createdMessage.sender_id).toBe(createMessageDto.sender_id);
+      expect(createdMessage.sender_id).toBe(user_1);
     });
 
     it('should return exception if contact id not found when create message', async () => {
       const createMessageDto = {
-        sender_id: user_1,
         contact_id: 'not_exist_contact_id',
         message: 'messsage',
       };
 
-      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+      await expect(
+        messageService.create(createMessageDto, user_1),
+      ).rejects.toThrow(
         new WsException({
           error: {
             code: 'NOT_FOUND',
@@ -460,12 +467,13 @@ describe('MessageService', () => {
 
     it('should return exception if sender id not found when create message', async () => {
       const createMessageDto = {
-        sender_id: 'not_exist_user_id',
         contact_id,
         message: 'messsage',
       };
 
-      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+      await expect(
+        messageService.create(createMessageDto, 'not_exist_user_id'),
+      ).rejects.toThrow(
         new WsException({
           error: {
             code: 'NOT_FOUND',
@@ -477,12 +485,13 @@ describe('MessageService', () => {
 
     it('should return exception if group id not found when create message', async () => {
       const createMessageDto = {
-        sender_id: user_1,
         group_id: 'not_exist_group_id',
         message: 'message',
       };
 
-      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+      await expect(
+        messageService.create(createMessageDto, user_1),
+      ).rejects.toThrow(
         new WsException({
           error: {
             code: 'NOT_FOUND',
@@ -494,13 +503,14 @@ describe('MessageService', () => {
 
     it('should return exception if group id and contact id both were given when create message', async () => {
       const createMessageDto = {
-        sender_id: user_1,
         group_id,
         contact_id,
         message: 'message',
       };
 
-      await expect(messageService.create(createMessageDto)).rejects.toThrow(
+      await expect(
+        messageService.create(createMessageDto, user_1),
+      ).rejects.toThrow(
         new WsException({
           error: {
             code: 'VALIDATION_ERROR',
