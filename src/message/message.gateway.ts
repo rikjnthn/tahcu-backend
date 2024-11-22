@@ -28,6 +28,10 @@ import validationExceptionFactory from 'src/common/helper/validation-exception-f
 import { MessageType } from './interface/message.interface';
 import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
 import { DeleteMessageDto } from './dto/delete-message.dto';
+import { messageWs } from 'src/common/middleware/message-ws.middleware';
+import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from 'src/common/prisma/prisma.service';
+import { AuthSocket } from 'src/common/interface/message-ws-middleware.interface';
 
 @WebSocketGateway({
   path: '/message',
@@ -54,14 +58,22 @@ export class MessageGateway
   @WebSocketServer()
   private readonly server: Server;
 
-  constructor(private messageService: MessageService) {}
+  constructor(
+    private messageService: MessageService,
+    private jwtService: JwtService,
+    private prismaService: PrismaService,
+  ) {}
 
   @SubscribeMessage('create')
   async create(
     @MessageBody('chat_id') chatId: string,
     @MessageBody('data') createMessageDto: CreateMessageDto,
+    @ConnectedSocket() client: AuthSocket,
   ): Promise<void> {
-    const message = await this.messageService.create(createMessageDto);
+    const message = await this.messageService.create(
+      createMessageDto,
+      client.user.user_id,
+    );
     this.server.to(chatId).emit('message', message);
   }
 
@@ -107,8 +119,10 @@ export class MessageGateway
     client.leave(id);
   }
 
-  afterInit(): void {
+  afterInit(server: Server): void {
     this.logger.log('Websocket initialized');
+
+    server.use(messageWs(this.jwtService, this.prismaService));
   }
 
   handleConnection(client: Socket): void {

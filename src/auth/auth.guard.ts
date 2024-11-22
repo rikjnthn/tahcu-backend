@@ -86,7 +86,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException({
         error: {
           code: 'UNAUTHORIZED',
-          message: 'No user token were given',
+          message: 'User token is not valid',
         },
       });
     }
